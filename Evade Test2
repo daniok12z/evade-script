@@ -1,0 +1,1130 @@
+--[[ 
+    CASAA HUB - EVADE (FULL + MOVEMENTSET)
+    discord.gg/6UaRDjBY42
+    Loader: WindUI (RAW VERSION)
+    
+    📌 FITUR LENGKAP + SYNC LOGO SEPATU!
+--]]
+
+-- ==============================================
+-- FIX KHUSUS XENO (TARUH PALING ATAS)
+-- ==============================================
+if not is_sirhurt and not syn and not getexecutorname then
+    local old_warn = warn
+    warn = function() end
+    pcall(function()
+        local coreGui = game:GetService("CoreGui")
+        for _, v in ipairs(coreGui:GetChildren()) do
+            if v.Name:match("%d+") then v:Destroy() end
+        end
+    end)
+    task.spawn(function() task.wait(5) warn = old_warn end)
+end
+
+-- ==============================================
+-- 1. LOAD WINDUI LIBRARY (RAW VERSION)
+-- ==============================================
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+WindUI:SetNotificationLower(true)
+
+-- ==============================================
+-- 2. CREATE MAIN WINDOW
+-- ==============================================
+local Window = WindUI:CreateWindow({
+    Title = "Casaa Hub (discord.gg/6UaRDjBY42)",
+    Icon = "bird",
+    Author = "Evade",
+    Folder = "CasaaHub/Evade",
+    Size = UDim2.fromOffset(620, 460),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 180,
+})
+
+Window:EditOpenButton({ Title = "Casaa Hub", Icon = "monitor", Draggable = true })
+
+-- ==============================================
+-- 3. SETUP SERVICES
+-- ==============================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- ==============================================
+-- 4. MOVEMENTSET (BUAT SYNC LOGO SEPATU)
+-- ==============================================
+local MovementSet = game:GetService("StarterPlayer")
+    .StarterPlayerScripts
+    :FindFirstChild("MovementSet")
+
+print("🔍 MovementSet:", MovementSet and "✅ DITEMUKAN" or "❌ TIDAK DITEMUKAN")
+
+-- Fungsi sync speed ke logo sepatu via MovementSet
+local function syncSpeedToLogo(speed)
+    if not MovementSet then return end
+    
+    -- Coba semua remote di MovementSet
+    for _, child in ipairs(MovementSet:GetChildren()) do
+        if child:IsA("RemoteEvent") then
+            pcall(function()
+                child:FireServer("SetSpeed", speed)
+                child:FireServer("Speed", speed)
+                child:FireServer(speed)
+                child:FireServer("UpdateSpeed", speed)
+                child:FireServer("ChangeSpeed", speed)
+            end)
+        elseif child:IsA("RemoteFunction") then
+            pcall(function()
+                child:InvokeServer("SetSpeed", speed)
+                child:InvokeServer("Speed", speed)
+                child:InvokeServer(speed)
+            end)
+        end
+    end
+    
+    -- Backup pake WalkSpeed
+    local char = player.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speed
+        end
+    end
+end
+
+-- ==============================================
+-- 5. CREATE TABS
+-- ==============================================
+local AutoTab = Window:Tab({ Title = "Auto", Icon = "zap" })
+local EspTab = Window:Tab({ Title = "Esp", Icon = "eye" })
+local MiscTab = Window:Tab({ Title = "Misc", Icon = "settings" })
+local VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })
+local TeleportTab = Window:Tab({ Title = "Teleport", Icon = "map" })
+local KeybindTab = Window:Tab({ Title = "Keybind", Icon = "keyboard" })
+local ConfigTab = Window:Tab({ Title = "Config", Icon = "save" })
+
+-- ==============================================
+-- 6. FLOATING BUTTON SYSTEM (UNTUK ANDROID)
+-- ==============================================
+local FloatingGui = Instance.new("ScreenGui")
+FloatingGui.Name = "CasaaFloatingButtons"
+FloatingGui.Parent = game:GetService("CoreGui")
+FloatingGui.ResetOnSpawn = false
+
+local function createFloatingButton(name, defaultPos, colorOn, colorOff, getState, toggleFunc)
+    local btn = Instance.new("ImageButton")
+    btn.Name = name .. "Button"
+    btn.Size = UDim2.new(0, 60, 0, 60)
+    btn.Position = defaultPos
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.BackgroundTransparency = 0.2
+    btn.Image = "rbxassetid://3926305904"
+    btn.ImageColor3 = getState() and colorOn or colorOff
+    btn.Draggable = true
+    btn.Active = true
+    btn.Parent = FloatingGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 30)
+    corner.Parent = btn
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Position = UDim2.new(0, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextStrokeTransparency = 0.5
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 12
+    label.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        toggleFunc()
+        btn.ImageColor3 = getState() and colorOn or colorOff
+    end)
+
+    return btn
+end
+
+-- ==============================================
+-- 7. AUTO TRIMP (FRONT JUMP) + SYNC MOVEMENTSET
+-- ==============================================
+getgenv().FeatureStates = getgenv().FeatureStates or {}
+getgenv().FeatureStates.FrontJumpEnabled = false
+getgenv().FeatureStates.FrontJumpSpeed = 50
+getgenv().frontJumpVelocity = nil
+
+local function startFrontJump()
+    if getgenv().frontJumpVelocity then getgenv().frontJumpVelocity:Destroy() end
+    local char, root = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not char or not root then return end
+    
+    getgenv().frontJumpVelocity = Instance.new("BodyVelocity")
+    getgenv().frontJumpVelocity.MaxForce = Vector3.new(400000, 0, 400000)
+    getgenv().frontJumpVelocity.P = 1250
+    getgenv().frontJumpVelocity.Parent = root
+
+    task.spawn(function()
+        while getgenv().FeatureStates.FrontJumpEnabled and getgenv().frontJumpVelocity and getgenv().frontJumpVelocity.Parent do
+            local forward = Camera.CFrame.LookVector
+            local direction = Vector3.new(forward.X, 0, forward.Z).Unit
+            if direction.Magnitude < 0.1 then direction = root.CFrame.LookVector; direction = Vector3.new(direction.X, 0, direction.Z).Unit end
+            getgenv().frontJumpVelocity.Velocity = direction * getgenv().FeatureStates.FrontJumpSpeed
+            task.wait(0.016)
+        end
+    end)
+end
+
+local function toggleAutoTrimp()
+    local new = not getgenv().FeatureStates.FrontJumpEnabled
+    getgenv().FeatureStates.FrontJumpEnabled = new
+    if new then 
+        startFrontJump()
+        syncSpeedToLogo(getgenv().FeatureStates.FrontJumpSpeed)  -- SYNC KE LOGO!
+    else
+        if getgenv().frontJumpVelocity then 
+            getgenv().frontJumpVelocity:Destroy() 
+            getgenv().frontJumpVelocity = nil
+        end
+        syncSpeedToLogo(16)  -- Balikin ke speed normal
+    end
+    if AutoTrimpToggle then AutoTrimpToggle:Set(new) end
+    WindUI:Notify({ Title = "AutoTrimp", Content = new and "ON" or "OFF", Duration = 1 })
+end
+
+local AutoTrimpToggle = AutoTab:Toggle({
+    Title = "AutoTrimp", Desc = "Front Jump + Sync Logo", Value = false,
+    Callback = toggleAutoTrimp
+})
+
+AutoTab:Input({
+    Title = "Trimp Speed", Placeholder = "Default 50", Value = "50",
+    Callback = function(input) 
+        local val = tonumber(input)
+        if val and val > 0 then 
+            getgenv().FeatureStates.FrontJumpSpeed = val
+            if getgenv().FeatureStates.FrontJumpEnabled then
+                syncSpeedToLogo(val)  -- SYNC KALO SEDANG ON
+            end
+        end
+    end
+})
+
+-- ==============================================
+-- 8. BHOP (DARI TEST-FOR-U)
+-- ==============================================
+getgenv().FeatureStates.BhopEnabled = false
+getgenv().BhopConnection = nil
+
+local function handleBhop()
+    if not getgenv().FeatureStates.BhopEnabled then return end
+    local char, humanoid, root = player.Character, player.Character and player.Character:FindFirstChildOfClass("Humanoid"), player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not char or not humanoid or not root then return end
+    local ray = Ray.new(root.Position, Vector3.new(0, -4, 0))
+    local hit = workspace:FindPartOnRayWithIgnoreList(ray, {char})
+    if hit and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+end
+
+local BhopToggle = AutoTab:Toggle({
+    Title = "Bhop", Desc = "Auto jump / bunny hop", Value = false,
+    Callback = function(state)
+        getgenv().FeatureStates.BhopEnabled = state
+        if state then
+            if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() end
+            getgenv().BhopConnection = RunService.Heartbeat:Connect(handleBhop)
+        else
+            if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() getgenv().BhopConnection = nil end
+        end
+    end
+})
+
+-- ==============================================
+-- 9. AUTO CARRY (SCRIPT LAMA)
+-- ==============================================
+getgenv().autoCarryEnabled = false
+getgenv().autoCarryConnection = nil
+
+local function startAutoCarry()
+    if getgenv().autoCarryConnection then return end
+    getgenv().autoCarryConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().autoCarryEnabled then return end
+        local char, hrp = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+                if dist <= 20 then
+                    pcall(function() ReplicatedStorage.Events.Character.Interact:FireServer("Carry", nil, plr.Name) end)
+                    task.wait(0.05)
+                end
+            end
+        end
+    end)
+end
+
+local function stopAutoCarry()
+    if getgenv().autoCarryConnection then getgenv().autoCarryConnection:Disconnect() getgenv().autoCarryConnection = nil end
+end
+
+local function toggleAutoCarry()
+    local new = not getgenv().autoCarryEnabled
+    getgenv().autoCarryEnabled = new
+    if new then startAutoCarry() else stopAutoCarry() end
+    if AutoCarryToggle then AutoCarryToggle:Set(new) end
+    WindUI:Notify({ Title = "AutoCarry", Content = new and "ON" or "OFF", Duration = 1 })
+end
+
+local AutoCarryToggle = AutoTab:Toggle({
+    Title = "Auto Carry", Desc = "Carry nearby players", Value = false,
+    Callback = toggleAutoCarry
+})
+
+-- ==============================================
+-- 10. TELEPORT ROOF
+-- ==============================================
+local function teleportRoof()
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if root then root.CFrame = root.CFrame + Vector3.new(0, 500, 0); WindUI:Notify({ Title = "Teleported!", Duration = 2 }) end
+end
+AutoTab:Button({ Title = "Teleport to Roof", Desc = "Naik 500 stud", Callback = teleportRoof })
+
+-- ==============================================
+-- 11. AUTO TICKET FARM
+-- ==============================================
+getgenv().TicketSystem = {
+    AutoTicketFarm = false,
+    Collected = 0,
+    AutoConnection = nil
+}
+
+local function findTickets()
+    local tickets = {}
+    local gameFolder = workspace:FindFirstChild("Game")
+    if gameFolder then
+        local ticketsFolder = gameFolder:FindFirstChild("Tickets")
+        if ticketsFolder then
+            for _, v in ipairs(ticketsFolder:GetChildren()) do
+                if v:IsA("BasePart") and v.Transparency < 1 then
+                    table.insert(tickets, v)
+                end
+            end
+        end
+    end
+    local ticketsFolder = workspace:FindFirstChild("Tickets")
+    if ticketsFolder then
+        for _, v in ipairs(ticketsFolder:GetChildren()) do
+            if v:IsA("BasePart") and v.Transparency < 1 then
+                table.insert(tickets, v)
+            end
+        end
+    end
+    return tickets
+end
+
+local function startAutoTicketFarm()
+    if getgenv().TicketSystem.AutoConnection then return end
+    getgenv().TicketSystem.AutoConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().TicketSystem.AutoTicketFarm then return end
+        local char, hrp = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local tickets = findTickets()
+        for _, ticket in ipairs(tickets) do
+            hrp.CFrame = ticket.CFrame + Vector3.new(0, 2, 0)
+            getgenv().TicketSystem.Collected = getgenv().TicketSystem.Collected + 1
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function stopAutoTicketFarm()
+    if getgenv().TicketSystem.AutoConnection then
+        getgenv().TicketSystem.AutoConnection:Disconnect()
+        getgenv().TicketSystem.AutoConnection = nil
+    end
+end
+
+local AutoTicketToggle = AutoTab:Toggle({
+    Title = "Auto Ticket Farm",
+    Desc = "Otomatis ambil semua tiket",
+    Value = false,
+    Callback = function(state)
+        getgenv().TicketSystem.AutoTicketFarm = state
+        if state then
+            startAutoTicketFarm()
+            WindUI:Notify({ Title = "Auto Ticket", Content = "ON", Duration = 2 })
+        else
+            stopAutoTicketFarm()
+            WindUI:Notify({ Title = "Auto Ticket", Content = "OFF - Collected: " .. getgenv().TicketSystem.Collected, Duration = 2 })
+        end
+    end
+})
+
+-- ==============================================
+-- 12. ANTI AFK
+-- ==============================================
+getgenv().AntiAFKEnabled = true
+getgenv().AntiAFKConnection = nil
+
+local function startAntiAFK()
+    if getgenv().AntiAFKConnection then return end
+    getgenv().AntiAFKConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().AntiAFKEnabled then return end
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid:Move(Vector3.new(0,0,0), false) end
+    end)
+end
+
+local AntiAFKToggle = AutoTab:Toggle({
+    Title = "Anti AFK", Desc = "Cegah kick karena idle", Value = true,
+    Callback = function(state)
+        getgenv().AntiAFKEnabled = state
+        if state then startAntiAFK() else
+            if getgenv().AntiAFKConnection then getgenv().AntiAFKConnection:Disconnect() getgenv().AntiAFKConnection = nil end
+        end
+    end
+})
+
+-- ==============================================
+-- 13. NEXTBOT ESP
+-- ==============================================
+_G.NextbotESPEnabled = false
+_G.NextbotESPThread = nil
+
+EspTab:Button({
+    Title = "Nextbot ESP",
+    Callback = function()
+        if _G.NextbotESPEnabled then
+            _G.NextbotESPEnabled = false
+            if _G.NextbotESPThread and coroutine.status(_G.NextbotESPThread) ~= "dead" then coroutine.close(_G.NextbotESPThread) _G.NextbotESPThread = nil end
+            WindUI:Notify({Title="Nextbot ESP", Content="Disabled", Duration=2})
+        else
+            _G.NextbotESPEnabled = true
+            _G.NextbotESPThread = coroutine.create(function()
+                while _G.NextbotESPEnabled do
+                    local folder = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+                    if folder then
+                        for _, npc in ipairs(folder:GetChildren()) do
+                            if npc:GetAttribute("Team") == "Nextbot" then
+                                local part = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Head")
+                                if part then
+                                    local billboard = part:FindFirstChild("NextbotESP") or Instance.new("BillboardGui")
+                                    billboard.Name = "NextbotESP"
+                                    billboard.Adornee = part
+                                    billboard.Size = UDim2.new(0, 150, 0, 30)
+                                    billboard.StudsOffset = Vector3.new(0, 3, 0)
+                                    billboard.AlwaysOnTop = true
+                                    billboard.Parent = part
+                                    local label = billboard:FindFirstChild("Label") or Instance.new("TextLabel")
+                                    label.Size = UDim2.new(1, 0, 1, 0)
+                                    label.BackgroundTransparency = 1
+                                    label.Text = npc.Name .. "\n[Nextbot]"
+                                    label.TextColor3 = Color3.fromRGB(255, 0, 0)
+                                    label.TextScaled = true
+                                    label.Font = Enum.Font.GothamBold
+                                    label.Parent = billboard
+                                end
+                            end
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
+            coroutine.resume(_G.NextbotESPThread)
+            WindUI:Notify({Title="Nextbot ESP", Content="Enabled", Duration=2})
+        end
+    end
+})
+
+-- ==============================================
+-- 14. DOWNED PLAYER ESP
+-- ==============================================
+local downedESPEnabled = false
+local downedBillboards = {}
+
+task.spawn(function()
+    while true do
+        if downedESPEnabled then
+            for _, billboard in pairs(downedBillboards) do if billboard then billboard:Destroy() end end
+            downedBillboards = {}
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                    local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if humanoid and root and humanoid.Health <= 0 then
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Adornee = root
+                        billboard.Size = UDim2.new(0, 100, 0, 30)
+                        billboard.StudsOffset = Vector3.new(0, 3, 0)
+                        billboard.AlwaysOnTop = true
+                        billboard.Parent = root
+                        local label = Instance.new("TextLabel")
+                        label.Size = UDim2.new(1, 0, 1, 0)
+                        label.BackgroundTransparency = 1
+                        label.Text = "DOWNED"
+                        label.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        label.TextScaled = true
+                        label.Font = Enum.Font.GothamBlack
+                        label.Parent = billboard
+                        downedBillboards[plr] = billboard
+                    end
+                end
+            end
+        else
+            for _, billboard in pairs(downedBillboards) do if billboard then billboard:Destroy() end end
+            downedBillboards = {}
+        end
+        task.wait(0.5)
+    end
+end)
+
+local DownedESPToggle = EspTab:Toggle({
+    Title = "Downed Player ESP", Value = false,
+    Callback = function(state) downedESPEnabled = state end
+})
+
+-- ==============================================
+-- 15. ESP TICKET
+-- ==============================================
+getgenv().TicketESP = {
+    Enabled = false,
+    Billboards = {},
+    Connections = {}
+}
+
+local function createTicketESP(ticket)
+    if not ticket or not ticket:IsA("BasePart") then return end
+    if ticket:FindFirstChild("TicketESP") then return end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "TicketESP"
+    billboard.Adornee = ticket
+    billboard.Size = UDim2.new(0, 100, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = ticket
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = "🎫 TICKET"
+    label.TextColor3 = Color3.fromRGB(255, 215, 0)
+    label.TextStrokeTransparency = 0.3
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.Parent = billboard
+    
+    table.insert(getgenv().TicketESP.Billboards, billboard)
+end
+
+local function updateTicketESP()
+    for _, billboard in ipairs(getgenv().TicketESP.Billboards) do
+        pcall(function() billboard:Destroy() end)
+    end
+    getgenv().TicketESP.Billboards = {}
+    
+    if not getgenv().TicketESP.Enabled then return end
+    
+    local tickets = findTickets()
+    for _, ticket in ipairs(tickets) do
+        createTicketESP(ticket)
+    end
+end
+
+EspTab:Toggle({
+    Title = "ESP Ticket",
+    Desc = "Tampilkan tiket tembus pandang",
+    Value = false,
+    Callback = function(state)
+        getgenv().TicketESP.Enabled = state
+        if state then
+            updateTicketESP()
+            table.insert(getgenv().TicketESP.Connections, RunService.Heartbeat:Connect(function()
+                if getgenv().TicketESP.Enabled then updateTicketESP() end
+            end))
+            WindUI:Notify({ Title = "ESP Ticket", Content = "ON", Duration = 2 })
+        else
+            for _, billboard in ipairs(getgenv().TicketESP.Billboards) do
+                pcall(function() billboard:Destroy() end)
+            end
+            getgenv().TicketESP.Billboards = {}
+            WindUI:Notify({ Title = "ESP Ticket", Content = "OFF", Duration = 1 })
+        end
+    end
+})
+
+EspTab:Button({
+    Title = "📊 Ticket Stats",
+    Desc = "Total tiket terkumpul: " .. getgenv().TicketSystem.Collected,
+    Callback = function()
+        WindUI:Popup({
+            Title = "Ticket Stats",
+            Content = "Total terkumpul: " .. getgenv().TicketSystem.Collected .. " tiket",
+            Buttons = { { Title = "OK" } }
+        })
+    end
+})
+
+-- ==============================================
+-- 16. NO CLIP
+-- ==============================================
+getgenv().NoClipEnabled = false
+getgenv().NoClipConnection = nil
+
+local function runNoclip()
+    if not getgenv().NoClipEnabled or not player.Character then return end
+    for _, v in pairs(player.Character:GetDescendants()) do
+        if v:IsA('BasePart') and v.CanCollide then v.CanCollide = false end
+    end
+end
+
+local NoClipToggle = MiscTab:Toggle({
+    Title = "No Clip", Desc = "Tembus tembok / noclip", Value = false,
+    Callback = function(state)
+        getgenv().NoClipEnabled = state
+        if state then
+            if getgenv().NoClipConnection then getgenv().NoClipConnection:Disconnect() end
+            getgenv().NoClipConnection = RunService.Stepped:Connect(runNoclip)
+            WindUI:Notify({ Title = "No Clip", Content = "Enabled", Duration = 1 })
+        else
+            if getgenv().NoClipConnection then getgenv().NoClipConnection:Disconnect() getgenv().NoClipConnection = nil end
+            WindUI:Notify({ Title = "No Clip", Content = "Disabled", Duration = 1 })
+        end
+    end
+})
+
+-- ==============================================
+-- 17. REVIVE SYSTEM (MANUAL + AUTO + SELF)
+-- ==============================================
+getgenv().ReviveSystem = {
+    Manual = { Enabled = false, Connection = nil },
+    Auto = { Enabled = false, Connection = nil, TeleportBack = true },
+    Self = { Enabled = false, Mode = "Auto", Delay = 3, InstantDelay = 0.15, LastPosition = nil }
+}
+
+local function isPlayerDowned(pl)
+    if not pl or not pl.Character then return false end
+    local char = pl.Character
+    local downed = char:GetAttribute("Downed")
+    if downed == true then return true end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health <= 0 then return true end
+    return false
+end
+
+-- Manual Instant Revive (harus deket)
+local function startManualRevive()
+    if getgenv().ReviveSystem.Manual.Connection then return end
+    getgenv().ReviveSystem.Manual.Connection = RunService.Heartbeat:Connect(function()
+        if not getgenv().ReviveSystem.Manual.Enabled then return end
+        local myChar, myHRP = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if pl ~= player and isPlayerDowned(pl) then
+                local theirChar, theirHRP = pl.Character, pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
+                if theirHRP then
+                    local dist = (myHRP.Position - theirHRP.Position).Magnitude
+                    if dist <= 15 then
+                        pcall(function() ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, pl.Name) end)
+                        task.wait(0.2)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Auto Instant Revive (teleport)
+local function startAutoRevive()
+    if getgenv().ReviveSystem.Auto.Connection then return end
+    getgenv().ReviveSystem.Auto.Connection = RunService.Heartbeat:Connect(function()
+        if not getgenv().ReviveSystem.Auto.Enabled then return end
+        local myChar, myHRP = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
+        local myPos = myHRP.Position
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if pl ~= player and isPlayerDowned(pl) then
+                local theirChar, theirHRP = pl.Character, pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
+                if theirHRP then
+                    local dist = (myPos - theirHRP.Position).Magnitude
+                    if dist <= 50 then
+                        myHRP.CFrame = theirHRP.CFrame + Vector3.new(0, 3, 0)
+                        pcall(function() ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, pl.Name) end)
+                        if getgenv().ReviveSystem.Auto.TeleportBack then
+                            task.wait(0.1)
+                            myHRP.CFrame = CFrame.new(myPos) + Vector3.new(0, 3, 0)
+                        end
+                        task.wait(0.3)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Self Revive
+local function setupSelfRevive(character)
+    if not character then return end
+    task.defer(function()
+        character:WaitForChild("HumanoidRootPart", 5)
+        character:WaitForChild("Humanoid", 5)
+        task.spawn(function()
+            while character and character.Parent do
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                if hrp then getgenv().ReviveSystem.Self.LastPosition = hrp.Position end
+                task.wait(0.2)
+            end
+        end)
+        character:GetAttributeChangedSignal("Downed"):Connect(function()
+            if not getgenv().ReviveSystem.Self.Enabled then return end
+            if character:GetAttribute("Downed") ~= true then return end
+            local delay = getgenv().ReviveSystem.Self.Mode == "Auto" and getgenv().ReviveSystem.Self.Delay or getgenv().ReviveSystem.Self.InstantDelay
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then getgenv().ReviveSystem.Self.LastPosition = hrp.Position end
+            task.wait(delay)
+            local startTime = tick()
+            repeat
+                pcall(function() ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true) end)
+                task.wait(0.5)
+            until character:GetAttribute("Downed") ~= true or tick() - startTime > 2
+            local newChar
+            repeat newChar = player.Character; task.wait() until newChar and newChar:FindFirstChild("HumanoidRootPart")
+            local newHRP = newChar:FindFirstChild("HumanoidRootPart")
+            if getgenv().ReviveSystem.Self.LastPosition and newHRP then
+                newHRP.CFrame = CFrame.new(getgenv().ReviveSystem.Self.LastPosition)
+                task.wait(0.1)
+            end
+        end)
+    end)
+end
+
+-- UI Revive
+MiscTab:Section({ Title = "Revive Others", Icon = "users" })
+
+MiscTab:Toggle({
+    Title = "Manual Instant Revive",
+    Desc = "Revive instan kalo deket player",
+    Value = false,
+    Callback = function(state)
+        getgenv().ReviveSystem.Manual.Enabled = state
+        if state then startManualRevive() else
+            if getgenv().ReviveSystem.Manual.Connection then
+                getgenv().ReviveSystem.Manual.Connection:Disconnect()
+                getgenv().ReviveSystem.Manual.Connection = nil
+            end
+        end
+    end
+})
+
+MiscTab:Toggle({
+    Title = "Auto Instant Revive",
+    Desc = "Otomatis teleport & revive player",
+    Value = false,
+    Callback = function(state)
+        getgenv().ReviveSystem.Auto.Enabled = state
+        if state then startAutoRevive() else
+            if getgenv().ReviveSystem.Auto.Connection then
+                getgenv().ReviveSystem.Auto.Connection:Disconnect()
+                getgenv().ReviveSystem.Auto.Connection = nil
+            end
+        end
+    end
+})
+
+MiscTab:Toggle({
+    Title = "Teleport Back",
+    Desc = "Balik ke posisi awal setelah revive",
+    Value = true,
+    Callback = function(state) getgenv().ReviveSystem.Auto.TeleportBack = state end
+})
+
+MiscTab:Section({ Title = "Self Revive", Icon = "user" })
+
+MiscTab:Toggle({
+    Title = "Self Revive",
+    Desc = "Revive diri sendiri otomatis",
+    Value = false,
+    Callback = function(state)
+        getgenv().ReviveSystem.Self.Enabled = state
+        if state then
+            if player.Character then setupSelfRevive(player.Character) end
+            table.insert(getgenv().ReviveSystem.Self.Connections or {}, player.CharacterAdded:Connect(function(newChar)
+                if getgenv().ReviveSystem.Self.Enabled then task.wait(0.5); setupSelfRevive(newChar) end
+            end))
+        end
+    end
+})
+
+MiscTab:Dropdown({
+    Title = "Self Revive Mode",
+    Desc = "Auto = 3 detik, Instant = 0.15 detik",
+    Values = {"Auto", "Instant"},
+    Value = "Auto",
+    Callback = function(value) getgenv().ReviveSystem.Self.Mode = value end
+})
+
+-- ==============================================
+-- 18. HEADLESS & KORBLOX
+-- ==============================================
+getgenv().HeadlessKorblox = { Enabled = false, Connections = {} }
+local HEADLESS_MESH_ID = "rbxassetid://1095708"
+local KORBLOX_MESH_ID = "rbxassetid://101851696"
+local KORBLOX_TEXTURE_ID = "rbxassetid://101851254"
+local DARK_GREY_COLOR = Color3.fromRGB(64, 64, 64)
+
+local function removeFace(head) local face = head:FindFirstChild("face"); if face then face:Destroy() end end
+local function applyHeadless(head)
+    if not head then return end
+    head.Transparency = 1; head.CanCollide = false; removeFace(head)
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.FileMesh; mesh.MeshId = HEADLESS_MESH_ID; mesh.Scale = Vector3.new(0.001, 0.001, 0.001); mesh.Parent = head
+    table.insert(getgenv().HeadlessKorblox.Connections, head:GetPropertyChangedSignal("Transparency"):Connect(function() if head.Transparency ~= 1 then head.Transparency = 1 end end))
+    table.insert(getgenv().HeadlessKorblox.Connections, head.ChildAdded:Connect(function(child) if child.Name == "face" and child:IsA("Decal") then child:Destroy() end end))
+end
+local function applyKorbloxR6(character)
+    local rightLeg = character:FindFirstChild("Right Leg"); if not rightLeg then return end
+    for _, child in ipairs(rightLeg:GetChildren()) do if child:IsA("SpecialMesh") or child:IsA("CharacterMesh") then child:Destroy() end end
+    rightLeg.Color = DARK_GREY_COLOR
+    table.insert(getgenv().HeadlessKorblox.Connections, rightLeg:GetPropertyChangedSignal("Color"):Connect(function() if rightLeg.Color ~= DARK_GREY_COLOR then rightLeg.Color = DARK_GREY_COLOR end end))
+    local korbloxMesh = Instance.new("SpecialMesh")
+    korbloxMesh.MeshType = Enum.MeshType.FileMesh; korbloxMesh.MeshId = KORBLOX_MESH_ID; korbloxMesh.TextureId = KORBLOX_TEXTURE_ID; korbloxMesh.Scale = Vector3.new(1, 1, 1); korbloxMesh.Parent = rightLeg
+end
+local function applyKorbloxR15(character)
+    local rightUpperLeg = character:FindFirstChild("RightUpperLeg"); if not rightUpperLeg then return end
+    rightUpperLeg.Transparency = 1
+    local rightLowerLeg = character:FindFirstChild("RightLowerLeg"); local rightFoot = character:FindFirstChild("RightFoot")
+    if rightLowerLeg then rightLowerLeg.Transparency = 1 end; if rightFoot then rightFoot.Transparency = 1 end
+    local korbloxLeg = Instance.new("Part")
+    korbloxLeg.Name = "KorbloxLeg"; korbloxLeg.Size = Vector3.new(1, 2, 1); korbloxLeg.Anchored = false; korbloxLeg.CanCollide = false; korbloxLeg.Color = DARK_GREY_COLOR; korbloxLeg.Parent = character
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.FileMesh; mesh.MeshId = KORBLOX_MESH_ID; mesh.TextureId = KORBLOX_TEXTURE_ID; mesh.Scale = Vector3.new(1, 1, 1); mesh.Parent = korbloxLeg
+    local weld = Instance.new("Weld")
+    weld.Part0 = rightUpperLeg; weld.Part1 = korbloxLeg; weld.C0 = CFrame.new(0, -0.8, 0); weld.Parent = korbloxLeg
+end
+local function applyHeadlessKorblox(character)
+    local head = character:FindFirstChild("Head"); task.wait(0.1); if head then applyHeadless(head) end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        if humanoid.RigType == Enum.HumanoidRigType.R6 then applyKorbloxR6(character) elseif humanoid.RigType == Enum.HumanoidRigType.R15 then applyKorbloxR15(character) end
+    end
+end
+local function cleanupHeadlessKorblox() for _, conn in ipairs(getgenv().HeadlessKorblox.Connections) do pcall(function() conn:Disconnect() end) end; getgenv().HeadlessKorblox.Connections = {} end
+local function resetHeadlessKorblox()
+    local char = player.Character; if not char then return end
+    local head = char:FindFirstChild("Head"); if head then head.Transparency = 0; head.CanCollide = true; local mesh = head:FindFirstChildOfClass("SpecialMesh"); if mesh then mesh:Destroy() end end
+    local rightLeg = char:FindFirstChild("Right Leg"); if rightLeg then rightLeg.Color = Color3.fromRGB(163, 162, 165); local mesh = rightLeg:FindFirstChildOfClass("SpecialMesh"); if mesh then mesh:Destroy() end end
+    local korbloxLeg = char:FindFirstChild("KorbloxLeg"); if korbloxLeg then korbloxLeg:Destroy() end
+    local rightUpperLeg = char:FindFirstChild("RightUpperLeg"); if rightUpperLeg then rightUpperLeg.Transparency = 0 end
+    local rightLowerLeg = char:FindFirstChild("RightLowerLeg"); if rightLowerLeg then rightLowerLeg.Transparency = 0 end
+    local rightFoot = char:FindFirstChild("RightFoot"); if rightFoot then rightFoot.Transparency = 0 end
+end
+VisualTab:Toggle({ Title = "Headless & Korblox", Desc = "Headless head + korblox leg (auto reapply)", Value = false,
+    Callback = function(state)
+        getgenv().HeadlessKorblox.Enabled = state
+        if state then
+            cleanupHeadlessKorblox(); if player.Character then applyHeadlessKorblox(player.Character) end
+            table.insert(getgenv().HeadlessKorblox.Connections, player.CharacterAdded:Connect(function(newChar) if getgenv().HeadlessKorblox.Enabled then task.wait(0.5); applyHeadlessKorblox(newChar) end end))
+            table.insert(getgenv().HeadlessKorblox.Connections, RunService.Heartbeat:Connect(function() if getgenv().HeadlessKorblox.Enabled and player.Character then applyHeadlessKorblox(player.Character) end end))
+            WindUI:Notify({ Title = "Headless & Korblox", Content = "Enabled (auto reapply)", Duration = 2 })
+        else cleanupHeadlessKorblox(); resetHeadlessKorblox(); WindUI:Notify({ Title = "Headless & Korblox", Content = "Disabled", Duration = 2 }) end
+    end
+})
+
+-- ==============================================
+-- 19. ACCESSORY LOADER
+-- ==============================================
+getgenv().AccessoryLoader = { Enabled = false, AccessoryId = "", Connections = {} }
+local function applyAccessory(character, accessoryId)
+    if not character or accessoryId == "" then return end
+    for _, v in ipairs(character:GetChildren()) do if v:IsA("Accessory") and v.Name == "LoadedAccessory" then v:Destroy() end end
+    local success, result = pcall(function()
+        local accessory = Instance.new("Accessory"); accessory.Name = "LoadedAccessory"; accessory.AccessoryType = Enum.AccessoryType.Unknown; accessory.Parent = character
+        local handle = Instance.new("Part"); handle.Name = "Handle"; handle.Parent = accessory
+        local mesh = Instance.new("SpecialMesh"); mesh.MeshId = accessoryId; mesh.Parent = handle
+        return accessory
+    end)
+    if success then local humanoid = character:FindFirstChildOfClass("Humanoid"); if humanoid then humanoid:AddAccessory(result) end end
+end
+VisualTab:Input({ Title = "Accessory ID", Desc = "rbxassetid:// untuk accessory", Placeholder = "rbxassetid://123456789", Value = "", Callback = function(value) getgenv().AccessoryLoader.AccessoryId = value end })
+VisualTab:Toggle({ Title = "Load Accessory", Desc = "Terapkan accessory", Value = false,
+    Callback = function(state)
+        getgenv().AccessoryLoader.Enabled = state
+        if state and getgenv().AccessoryLoader.AccessoryId ~= "" then
+            if player.Character then applyAccessory(player.Character, getgenv().AccessoryLoader.AccessoryId) end
+            table.insert(getgenv().AccessoryLoader.Connections, player.CharacterAdded:Connect(function(newChar) if getgenv().AccessoryLoader.Enabled then task.wait(0.5); applyAccessory(newChar, getgenv().AccessoryLoader.AccessoryId) end end))
+            WindUI:Notify({ Title = "Accessory", Content = "Loaded", Duration = 2 })
+        else
+            for _, conn in ipairs(getgenv().AccessoryLoader.Connections) do pcall(function() conn:Disconnect() end) end
+            getgenv().AccessoryLoader.Connections = {}
+            WindUI:Notify({ Title = "Accessory", Content = "Disabled", Duration = 2 })
+        end
+    end
+})
+
+-- ==============================================
+-- 20. CLOTHING LOADER
+-- ==============================================
+getgenv().ClothingLoader = { ShirtId = "", PantsId = "", Enabled = false, Connections = {} }
+local function applyClothing(character, shirtId, pantsId)
+    if not character then return end
+    local oldShirt = character:FindFirstChildOfClass("Shirt"); if oldShirt then oldShirt:Destroy() end
+    local oldPants = character:FindFirstChildOfClass("Pants"); if oldPants then oldPants:Destroy() end
+    if shirtId and shirtId ~= "" then local shirt = Instance.new("Shirt"); shirt.Name = "LoadedShirt"; shirt.ShirtTemplate = shirtId; shirt.Parent = character end
+    if pantsId and pantsId ~= "" then local pants = Instance.new("Pants"); pants.Name = "LoadedPants"; pants.PantsTemplate = pantsId; pants.Parent = character end
+end
+VisualTab:Input({ Title = "Shirt ID", Desc = "rbxassetid:// untuk baju", Placeholder = "rbxassetid://123456789", Value = "", Callback = function(value) getgenv().ClothingLoader.ShirtId = value end })
+VisualTab:Input({ Title = "Pants ID", Desc = "rbxassetid:// untuk celana", Placeholder = "rbxassetid://123456789", Value = "", Callback = function(value) getgenv().ClothingLoader.PantsId = value end })
+VisualTab:Toggle({ Title = "Load Clothing", Desc = "Terapkan baju & celana", Value = false,
+    Callback = function(state)
+        getgenv().ClothingLoader.Enabled = state
+        if state then
+            if player.Character then applyClothing(player.Character, getgenv().ClothingLoader.ShirtId, getgenv().ClothingLoader.PantsId) end
+            table.insert(getgenv().ClothingLoader.Connections, player.CharacterAdded:Connect(function(newChar) if getgenv().ClothingLoader.Enabled then task.wait(0.5); applyClothing(newChar, getgenv().ClothingLoader.ShirtId, getgenv().ClothingLoader.PantsId) end end))
+            WindUI:Notify({ Title = "Clothing", Content = "Loaded", Duration = 2 })
+        else
+            for _, conn in ipairs(getgenv().ClothingLoader.Connections) do pcall(function() conn:Disconnect() end) end
+            getgenv().ClothingLoader.Connections = {}
+            WindUI:Notify({ Title = "Clothing", Content = "Disabled", Duration = 2 })
+        end
+    end
+})
+VisualTab:Button({ Title = "Reset All Visual", Desc = "Reset semua efek visual", Callback = function()
+    getgenv().HeadlessKorblox.Enabled = false; getgenv().AccessoryLoader.Enabled = false; getgenv().ClothingLoader.Enabled = false
+    cleanupHeadlessKorblox()
+    for _, conn in ipairs(getgenv().AccessoryLoader.Connections) do pcall(function() conn:Disconnect() end) end; getgenv().AccessoryLoader.Connections = {}
+    for _, conn in ipairs(getgenv().ClothingLoader.Connections) do pcall(function() conn:Disconnect() end) end; getgenv().ClothingLoader.Connections = {}
+    resetHeadlessKorblox()
+    local char = player.Character; if char then for _, v in ipairs(char:GetChildren()) do if v.Name == "LoadedAccessory" or v.Name == "LoadedShirt" or v.Name == "LoadedPants" then v:Destroy() end end end
+    WindUI:Notify({ Title = "Visual", Content = "All reset", Duration = 2 })
+end })
+
+-- ==============================================
+-- 21. TELEPORT 12 MAPS
+-- ==============================================
+local MapPositions = {
+    ["Work Facility"] = Vector3.new(-88.174683, -200.634064, 855.514526),
+    ["Imperal Palace"] = Vector3.new(961.357910, 99.949234, 6.249479),
+    ["Winter City"] = Vector3.new(-790.441040, -100.174255, 1697.133423),
+    ["Elysium Moonbase"] = Vector3.new(549.778381, 159.707993, 180.326141),
+    ["Elysium Laboratorium"] = Vector3.new(1269.21, 159.93, -300.43),
+    ["Kyoto"] = Vector3.new(374.98, 67.37, 26.99),
+    ["Bedroom"] = Vector3.new(-23.20, 172.42, -354.50),
+    ["PitStop"] = Vector3.new(-461.88, 100.75, -0.78),
+    ["Mayday"] = Vector3.new(-885.69, 387.03, -39.48),
+    ["Facade Small"] = Vector3.new(-230.97, 3.87, -261.75),
+    ["Construct"] = Vector3.new(-674.30, 247.95, 79.43),
+    ["Drab"] = Vector3.new(158.27, -80.51, -158.97)
+}
+local function FormatSimple(pos) return string.format("(%.2f, %.2f, %.2f)", pos.X, pos.Y, pos.Z) end
+local function TeleportTo(mapName)
+    local pos = MapPositions[mapName]
+    if pos and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+        WindUI:Notify({ Title = "Teleport", Content = "Ke " .. mapName, Duration = 2 })
+    end
+end
+local mapOrder = { "Work Facility", "Imperal Palace", "Winter City", "Elysium Moonbase", "Elysium Laboratorium", "Construct", "Kyoto", "Bedroom", "PitStop", "Mayday", "Facade Small", "Drab" }
+for _, mapName in ipairs(mapOrder) do
+    if MapPositions[mapName] then
+        TeleportTab:Button({ Title = mapName, Desc = FormatSimple(MapPositions[mapName]), Callback = function() TeleportTo(mapName) end })
+    end
+end
+
+-- ==============================================
+-- 22. KEYBIND SYSTEM
+-- ==============================================
+getgenv().Keybinds = {
+    ToggleUI = Enum.KeyCode.RightBracket,
+    AutoTrimp = Enum.KeyCode.R,
+    AutoBhop = Enum.KeyCode.B,
+    AutoCarry = Enum.KeyCode.F,
+    ManualRevive = Enum.KeyCode.Unknown,
+    AutoRevive = Enum.KeyCode.Unknown,
+    SelfRevive = Enum.KeyCode.Unknown,
+}
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    local key = input.KeyCode
+    
+    if key == getgenv().Keybinds.ToggleUI then Window:Toggle() return end
+    if key == getgenv().Keybinds.AutoTrimp then toggleAutoTrimp() return end
+    if key == getgenv().Keybinds.AutoBhop then
+        local new = not getgenv().FeatureStates.BhopEnabled
+        getgenv().FeatureStates.BhopEnabled = new
+        if new then if not getgenv().BhopConnection then getgenv().BhopConnection = RunService.Heartbeat:Connect(handleBhop) end
+        else if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() getgenv().BhopConnection = nil end end
+        if BhopToggle then BhopToggle:Set(new) end
+        WindUI:Notify({ Title = "AutoBhop", Content = new and "ON" or "OFF", Duration = 1 })
+        return
+    end
+    if key == getgenv().Keybinds.AutoCarry then toggleAutoCarry() return end
+end)
+
+KeybindTab:Keybind({ Title = "Toggle UI Key", Value = "]", Callback = function(key) getgenv().Keybinds.ToggleUI = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoTrimp Key", Value = "R", Callback = function(key) getgenv().Keybinds.AutoTrimp = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoBhop Key", Value = "B", Callback = function(key) getgenv().Keybinds.AutoBhop = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoCarry Key", Value = "F", Callback = function(key) getgenv().Keybinds.AutoCarry = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "Manual Revive Key", Value = "", Callback = function(key) getgenv().Keybinds.ManualRevive = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "Auto Revive Key", Value = "", Callback = function(key) getgenv().Keybinds.AutoRevive = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "Self Revive Key", Value = "", Callback = function(key) getgenv().Keybinds.SelfRevive = Enum.KeyCode[key] end })
+
+-- ==============================================
+-- 23. CONFIG SYSTEM
+-- ==============================================
+local ConfigManager = Window.ConfigManager
+local currentConfigName = "CasaaSettings"
+local myConfig = ConfigManager:CreateConfig(currentConfigName)
+
+local configElements = {
+    AutoTrimp = AutoTrimpToggle,
+    Bhop = BhopToggle,
+    AutoCarry = AutoCarryToggle,
+    DownedESP = DownedESPToggle,
+    NoClip = NoClipToggle,
+    AntiAFK = AntiAFKToggle,
+    AutoTicket = AutoTicketToggle,
+}
+
+for flagName, element in pairs(configElements) do
+    element.Flag = flagName
+    myConfig:Register(flagName, element)
+end
+
+local function getConfigList()
+    local configs = {}
+    local success, result = pcall(function() return ConfigManager:AllConfigs() end)
+    if success and result then for _, name in ipairs(result) do table.insert(configs, name) end end
+    return configs
+end
+
+ConfigTab:Input({
+    Title = "Config Name", Desc = "Nama file config", Placeholder = "CasaaSettings", Value = "CasaaSettings",
+    Callback = function(value)
+        if value and value ~= "" then
+            currentConfigName = value:gsub("%s+", "")
+            myConfig = ConfigManager:CreateConfig(currentConfigName)
+            for flagName, element in pairs(configElements) do myConfig:Register(flagName, element) end
+        end
+    end
+})
+
+local ConfigDropdown = ConfigTab:Dropdown({
+    Title = "Load Config", Values = getConfigList(),
+    Callback = function(selected)
+        if selected and selected ~= "" then
+            currentConfigName = selected
+            myConfig = ConfigManager:CreateConfig(currentConfigName)
+            for flagName, element in pairs(configElements) do myConfig:Register(flagName, element) end
+            WindUI:Notify({ Title = "Config", Content = "Selected: " .. selected, Duration = 2 })
+        end
+    end
+})
+
+ConfigTab:Button({ Title = "🔄 Refresh List", Callback = function()
+    local configs = getConfigList()
+    ConfigDropdown:SetValues(configs)
+    WindUI:Notify({ Title = "Config", Content = #configs > 0 and ("Found " .. #configs .. " configs") or "No configs", Duration = 2 })
+end })
+
+ConfigTab:Button({ Title = "💾 Save Config", Callback = function()
+    local success = pcall(function() myConfig:Save() end)
+    if success then
+        WindUI:Notify({ Title = "Config", Content = "Saved to: " .. currentConfigName, Duration = 2 })
+        task.wait(0.5); ConfigDropdown:SetValues(getConfigList())
+    else WindUI:Notify({ Title = "Error", Content = "Failed to save", Duration = 2, Icon = "alert-triangle" }) end
+end })
+
+ConfigTab:Button({ Title = "📂 Load Config", Callback = function()
+    local success = pcall(function() myConfig:Load() end)
+    if success then WindUI:Notify({ Title = "Config", Content = "Loaded: " .. currentConfigName, Duration = 2 })
+    else WindUI:Notify({ Title = "Error", Content = "Failed to load", Duration = 2, Icon = "alert-triangle" }) end
+end })
+
+ConfigTab:Button({ Title = "🗑️ Delete Config", Callback = function()
+    WindUI:Popup({
+        Title = "Confirm Delete",
+        Content = "Hapus " .. currentConfigName .. "?",
+        Buttons = {
+            { Title = "Yes", Callback = function()
+                local success = pcall(function() myConfig:Delete() end)
+                if success then
+                    WindUI:Notify({ Title = "Config", Content = "Deleted: " .. currentConfigName, Duration = 2 })
+                    currentConfigName = "CasaaSettings"
+                    myConfig = ConfigManager:CreateConfig(currentConfigName)
+                    for flagName, element in pairs(configElements) do myConfig:Register(flagName, element) end
+                    ConfigDropdown:SetValues(getConfigList())
+                else WindUI:Notify({ Title = "Error", Content = "Failed to delete", Duration = 2, Icon = "alert-triangle" }) end
+            end },
+            { Title = "No", Variant = "Tertiary" }
+        }
+    })
+end })
+
+-- ==============================================
+-- 24. FLOATING BUTTONS (ANDROID)
+-- ==============================================
+local trimpButton = createFloatingButton(
+    "TRIMP", UDim2.new(0, 20, 0, 150),
+    Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 0, 0),
+    function() return getgenv().FeatureStates.FrontJumpEnabled end,
+    toggleAutoTrimp
+)
+
+local carryButton = createFloatingButton(
+    "CARRY", UDim2.new(0, 20, 0, 220),
+    Color3.fromRGB(0, 200, 0), Color3.fromRGB(200, 0, 0),
+    function() return getgenv().autoCarryEnabled end,
+    toggleAutoCarry
+)
+
+-- ==============================================
+-- 25. SYNC TEST (CEK LOGO SEPATU)
+-- ==============================================
+local TestTab = Window:Tab({ Title = "Test", Icon = "test-tube" })
+
+TestTab:Label("🔍 MovementSet: " .. (MovementSet and "✅ DITEMUKAN" or "❌ TIDAK DITEMUKAN"))
+
+TestTab:Button({
+    Title = "🧪 Test Sync 50",
+    Desc = "Coba sync speed 50 ke logo",
+    Callback = function()
+        syncSpeedToLogo(50)
+        WindUI:Notify({ Title = "Test", Content = "Sync 50 dikirim", Duration = 2 })
+    end
+})
+
+TestTab:Button({
+    Title = "🧪 Test Sync 100",
+    Desc = "Coba sync speed 100 ke logo",
+    Callback = function()
+        syncSpeedToLogo(100)
+        WindUI:Notify({ Title = "Test", Content = "Sync 100 dikirim", Duration = 2 })
+    end
+})
+
+TestTab:Button({
+    Title = "🔄 Reset to 16",
+    Desc = "Balikin speed ke normal",
+    Callback = function()
+        syncSpeedToLogo(16)
+        WindUI:Notify({ Title = "Test", Content = "Reset ke 16", Duration = 2 })
+    end
+})
+
+-- ==============================================
+-- 26. FINAL NOTIFICATION
+-- ==============================================
+WindUI:Notify({ 
+    Title = "Casaa Hub", 
+    Content = "Loaded! Tekan ] untuk toggle UI\n" .. (MovementSet and "✅ Sync Logo Siap!" or "❌ MovementSet Tidak Ditemukan"), 
+    Duration = 5 
+})
+
+print("✅ Casaa Hub Final Loaded! + MovementSet Sync")
+print("📌 Fitur: AutoTrimp, Bhop, AutoCarry, ESP, Revive, Visual, Teleport, Config")
+print("📱 Android: Tombol TRIMP & CARRY bisa digeser!")
