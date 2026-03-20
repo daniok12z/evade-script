@@ -1,17 +1,17 @@
 --[[ 
-    CASAA HUB - EVADE (FULL)
+    CASAA HUB - EVADE (FULL + MOBILE BULET)
     discord.gg/6UaRDjBY42
     Loader: WindUI (RAW VERSION)
     
     📌 FITUR LENGKAP:
-    [Auto] AutoTrimp, Bhop, Auto Carry, Teleport Roof, Auto Ticket Farm, Anti AFK
+    [Auto] AutoTrimp (R), AutoTrimp New (keybind kosong), Bhop (keybind kosong), Auto Carry (F), Teleport Roof, Auto Ticket Farm, Anti AFK
     [Esp] Nextbot ESP, Downed ESP, ESP Ticket
     [Misc] No Clip, Manual Revive, Auto Revive, Self Revive (Auto/Instant)
     [Visual] Headless & Korblox, Accessory Loader, Clothing Loader
     [Teleport] 12 Map Teleport
-    [Keybind] 7 Keybind (bisa custom)
+    [Keybind] Keybind bisa custom (New Trimp & Bhop siap diisi)
     [Config] Save/Load Settings
-    [Android] Floating Button TRIMP & CARRY
+    [Mobile] 2 Tombol BULAT: TRIMP & CARRY (1x buat, 1x hapus)
 --]]
 
 -- ==============================================
@@ -72,53 +72,165 @@ local VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })
 local TeleportTab = Window:Tab({ Title = "Teleport", Icon = "map" })
 local KeybindTab = Window:Tab({ Title = "Keybind", Icon = "keyboard" })
 local ConfigTab = Window:Tab({ Title = "Config", Icon = "save" })
+local MobileTab = Window:Tab({ Title = "Mobile", Icon = "smartphone" })
 
 -- ==============================================
--- 5. FLOATING BUTTON SYSTEM (UNTUK ANDROID)
+-- 5. MOBILE UI - VERSI BULET (2 TOMBOL)
 -- ==============================================
-local FloatingGui = Instance.new("ScreenGui")
-FloatingGui.Name = "CasaaFloatingButtons"
-FloatingGui.Parent = game:GetService("CoreGui")
-FloatingGui.ResetOnSpawn = false
+local MobileUI = {
+    Instance = nil,
+    TrimpButton = nil,
+    CarryButton = nil
+}
 
-local function createFloatingButton(name, defaultPos, colorOn, colorOff, getState, toggleFunc)
-    local btn = Instance.new("ImageButton")
-    btn.Name = name .. "Button"
-    btn.Size = UDim2.new(0, 60, 0, 60)
-    btn.Position = defaultPos
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.BackgroundTransparency = 0.2
-    btn.Image = "rbxassetid://3926305904"
-    btn.ImageColor3 = getState() and colorOn or colorOff
-    btn.Draggable = true
-    btn.Active = true
-    btn.Parent = FloatingGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 30)
-    corner.Parent = btn
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.Position = UDim2.new(0, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextStrokeTransparency = 0.5
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 12
-    label.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        toggleFunc()
-        btn.ImageColor3 = getState() and colorOn or colorOff
+local function toggleMobileUI()
+    -- Kalo udah ada, hapus
+    if MobileUI.Instance then
+        MobileUI.Instance:Destroy()
+        MobileUI.Instance = nil
+        MobileUI.TrimpButton = nil
+        MobileUI.CarryButton = nil
+        WindUI:Notify({ Title = "Mobile UI", Content = "Dihapus", Duration = 2 })
+        return
+    end
+    
+    -- Buat ScreenGui baru
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "CasaaMobileUI"
+    gui.Parent = game:GetService("CoreGui")
+    gui.ResetOnSpawn = false
+    
+    -- ==========================================
+    -- TOMBOL TRIMP (BULAT)
+    -- ==========================================
+    local btnTrimp = Instance.new("ImageButton")
+    btnTrimp.Name = "TrimpButton"
+    btnTrimp.Size = UDim2.new(0, 70, 0, 70)
+    btnTrimp.Position = UDim2.new(0, 20, 0, 150)
+    btnTrimp.BackgroundColor3 = getgenv().FeatureStates and getgenv().FeatureStates.FrontJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    btnTrimp.BackgroundTransparency = 0.2
+    btnTrimp.Image = "rbxassetid://3926305904"
+    btnTrimp.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    btnTrimp.Draggable = true
+    btnTrimp.Active = true
+    btnTrimp.Parent = gui
+    
+    -- Bikin bulat
+    local cornerTrimp = Instance.new("UICorner")
+    cornerTrimp.CornerRadius = UDim.new(1, 0)
+    cornerTrimp.Parent = btnTrimp
+    
+    -- Label
+    local labelTrimp = Instance.new("TextLabel")
+    labelTrimp.Size = UDim2.new(1, 0, 0, 20)
+    labelTrimp.Position = UDim2.new(0, 0, 1, 0)
+    labelTrimp.BackgroundTransparency = 1
+    labelTrimp.Text = "TRIMP"
+    labelTrimp.TextColor3 = Color3.fromRGB(255, 255, 255)
+    labelTrimp.TextStrokeTransparency = 0.5
+    labelTrimp.Font = Enum.Font.GothamBold
+    labelTrimp.TextSize = 14
+    labelTrimp.Parent = btnTrimp
+    
+    btnTrimp.MouseButton1Click:Connect(function()
+        toggleAutoTrimp()
+        btnTrimp.BackgroundColor3 = getgenv().FeatureStates and getgenv().FeatureStates.FrontJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end)
-
-    return btn
+    
+    -- ==========================================
+    -- TOMBOL CARRY (BULAT)
+    -- ==========================================
+    local btnCarry = Instance.new("ImageButton")
+    btnCarry.Name = "CarryButton"
+    btnCarry.Size = UDim2.new(0, 70, 0, 70)
+    btnCarry.Position = UDim2.new(0, 20, 0, 240)
+    btnCarry.BackgroundColor3 = getgenv().autoCarryEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    btnCarry.BackgroundTransparency = 0.2
+    btnCarry.Image = "rbxassetid://3926305904"
+    btnCarry.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    btnCarry.Draggable = true
+    btnCarry.Active = true
+    btnCarry.Parent = gui
+    
+    -- Bikin bulat
+    local cornerCarry = Instance.new("UICorner")
+    cornerCarry.CornerRadius = UDim.new(1, 0)
+    cornerCarry.Parent = btnCarry
+    
+    -- Label
+    local labelCarry = Instance.new("TextLabel")
+    labelCarry.Size = UDim2.new(1, 0, 0, 20)
+    labelCarry.Position = UDim2.new(0, 0, 1, 0)
+    labelCarry.BackgroundTransparency = 1
+    labelCarry.Text = "CARRY"
+    labelCarry.TextColor3 = Color3.fromRGB(255, 255, 255)
+    labelCarry.TextStrokeTransparency = 0.5
+    labelCarry.Font = Enum.Font.GothamBold
+    labelCarry.TextSize = 14
+    labelCarry.Parent = btnCarry
+    
+    btnCarry.MouseButton1Click:Connect(function()
+        toggleAutoCarry()
+        btnCarry.BackgroundColor3 = getgenv().autoCarryEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    end)
+    
+    MobileUI.Instance = gui
+    MobileUI.TrimpButton = btnTrimp
+    MobileUI.CarryButton = btnCarry
+    WindUI:Notify({ Title = "Mobile UI", Content = "Dibuat! Tekan toggle lagi untuk hapus", Duration = 3 })
 end
 
+-- Toggle di tab Mobile
+MobileTab:Toggle({
+    Title = "Mobile Bulet",
+    Desc = "Tekan 1x buat (2 tombol), 1x hapus",
+    Value = false,
+    Callback = function(state)
+        toggleMobileUI()
+        -- Balikin toggle ke false biar bisa dipencet lagi
+        task.wait(0.1)
+        MobileTab:SetToggle(false)
+    end
+})
+
 -- ==============================================
--- 6. AUTO TRIMP (FRONT JUMP - DARI TEST-FOR-U)
+-- 6. KEYBIND SYSTEM (NEW TRIMP & BHOP KOSONG)
+-- ==============================================
+getgenv().Keybinds = {
+    ToggleUI = Enum.KeyCode.RightBracket,
+    AutoTrimpOld = Enum.KeyCode.R,        -- Trimp lama (R)
+    AutoTrimpNew = Enum.KeyCode.Unknown,   -- Trimp baru (keybind kosong)
+    AutoBhop = Enum.KeyCode.Unknown,       -- Bhop (keybind kosong)
+    AutoCarry = Enum.KeyCode.F,
+    ManualRevive = Enum.KeyCode.Unknown,
+    AutoRevive = Enum.KeyCode.Unknown,
+    SelfRevive = Enum.KeyCode.Unknown,
+}
+
+-- Handler keybind
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    local key = input.KeyCode
+    
+    if key == getgenv().Keybinds.ToggleUI then Window:Toggle() return end
+    if key == getgenv().Keybinds.AutoTrimpOld then toggleAutoTrimp() return end
+    if key == getgenv().Keybinds.AutoCarry then toggleAutoCarry() return end
+    
+    -- Trimp New dan Bhop gak ada handler (keybind kosong, nanti diisi manual)
+end)
+
+-- UI Keybind
+KeybindTab:Keybind({ Title = "Toggle UI Key", Value = "RightBracket", Callback = function(key) getgenv().Keybinds.ToggleUI = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoTrimp (Old)", Value = "R", Callback = function(key) getgenv().Keybinds.AutoTrimpOld = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoTrimp (New)", Value = "", Callback = function(key) getgenv().Keybinds.AutoTrimpNew = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoBhop", Value = "", Callback = function(key) getgenv().Keybinds.AutoBhop = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoCarry", Value = "F", Callback = function(key) getgenv().Keybinds.AutoCarry = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "Manual Revive", Value = "", Callback = function(key) getgenv().Keybinds.ManualRevive = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "Auto Revive", Value = "", Callback = function(key) getgenv().Keybinds.AutoRevive = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "Self Revive", Value = "", Callback = function(key) getgenv().Keybinds.SelfRevive = Enum.KeyCode[key] end })
+
+-- ==============================================
+-- 7. AUTO TRIMP (OLD) - TETEP
 -- ==============================================
 getgenv().FeatureStates = getgenv().FeatureStates or {}
 getgenv().FeatureStates.FrontJumpEnabled = false
@@ -146,18 +258,23 @@ local function startFrontJump()
     end)
 end
 
-local function toggleAutoTrimp()
+function toggleAutoTrimp()
     local new = not getgenv().FeatureStates.FrontJumpEnabled
     getgenv().FeatureStates.FrontJumpEnabled = new
     if new then startFrontJump() else
         if getgenv().frontJumpVelocity then getgenv().frontJumpVelocity:Destroy() getgenv().frontJumpVelocity = nil end
     end
-    if AutoTrimpToggle then AutoTrimpToggle:Set(new) end
-    WindUI:Notify({ Title = "AutoTrimp", Content = new and "ON" or "OFF", Duration = 1 })
+    if AutoTrimpOldToggle then AutoTrimpOldToggle:Set(new) end
+    WindUI:Notify({ Title = "AutoTrimp (Old)", Content = new and "ON" or "OFF", Duration = 1 })
+    
+    -- Update mobile button kalo ada
+    if MobileUI.TrimpButton then
+        MobileUI.TrimpButton.BackgroundColor3 = new and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    end
 end
 
-local AutoTrimpToggle = AutoTab:Toggle({
-    Title = "AutoTrimp", Desc = "Front Jump dari Test-for-u", Value = false,
+local AutoTrimpOldToggle = AutoTab:Toggle({
+    Title = "AutoTrimp (Old)", Desc = "Front Jump (R)", Value = false,
     Callback = toggleAutoTrimp
 })
 
@@ -167,7 +284,24 @@ AutoTab:Input({
 })
 
 -- ==============================================
--- 7. BHOP (DARI TEST-FOR-U)
+-- 8. AUTO TRIMP (NEW) - FITUR TETEP ADA, KEYBIND KOSONG
+-- ==============================================
+local AutoTrimpNewToggle = AutoTab:Toggle({
+    Title = "AutoTrimp (New)", 
+    Desc = "Fitur baru (keybind kosong)", 
+    Value = false,
+    Callback = function(state)
+        -- Nanti diisi sama lu
+        if state then
+            WindUI:Notify({ Title = "Trimp New", Content = "Fitur siap, isi keybind di tab Keybind", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "Trimp New", Content = "OFF", Duration = 1 })
+        end
+    end
+})
+
+-- ==============================================
+-- 9. BHOP - FITUR TETEP ADA, KEYBIND KOSONG
 -- ==============================================
 getgenv().FeatureStates.BhopEnabled = false
 getgenv().BhopConnection = nil
@@ -182,20 +316,24 @@ local function handleBhop()
 end
 
 local BhopToggle = AutoTab:Toggle({
-    Title = "Bhop", Desc = "Auto jump / bunny hop", Value = false,
+    Title = "Bhop", 
+    Desc = "Auto jump (keybind kosong)", 
+    Value = false,
     Callback = function(state)
         getgenv().FeatureStates.BhopEnabled = state
         if state then
             if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() end
             getgenv().BhopConnection = RunService.Heartbeat:Connect(handleBhop)
+            WindUI:Notify({ Title = "Bhop", Content = "ON - Isi keybind di tab Keybind", Duration = 1 })
         else
             if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() getgenv().BhopConnection = nil end
+            WindUI:Notify({ Title = "Bhop", Content = "OFF", Duration = 1 })
         end
     end
 })
 
 -- ==============================================
--- 8. AUTO CARRY (SCRIPT LAMA)
+-- 10. AUTO CARRY (TETEP)
 -- ==============================================
 getgenv().autoCarryEnabled = false
 getgenv().autoCarryConnection = nil
@@ -222,12 +360,17 @@ local function stopAutoCarry()
     if getgenv().autoCarryConnection then getgenv().autoCarryConnection:Disconnect() getgenv().autoCarryConnection = nil end
 end
 
-local function toggleAutoCarry()
+function toggleAutoCarry()
     local new = not getgenv().autoCarryEnabled
     getgenv().autoCarryEnabled = new
     if new then startAutoCarry() else stopAutoCarry() end
     if AutoCarryToggle then AutoCarryToggle:Set(new) end
     WindUI:Notify({ Title = "AutoCarry", Content = new and "ON" or "OFF", Duration = 1 })
+    
+    -- Update mobile button kalo ada
+    if MobileUI.CarryButton then
+        MobileUI.CarryButton.BackgroundColor3 = new and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    end
 end
 
 local AutoCarryToggle = AutoTab:Toggle({
@@ -236,7 +379,7 @@ local AutoCarryToggle = AutoTab:Toggle({
 })
 
 -- ==============================================
--- 9. TELEPORT ROOF (SCRIPT LAMA)
+-- 11. TELEPORT ROOF
 -- ==============================================
 local function teleportRoof()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -245,7 +388,7 @@ end
 AutoTab:Button({ Title = "Teleport to Roof", Desc = "Naik 500 stud", Callback = teleportRoof })
 
 -- ==============================================
--- 10. AUTO TICKET FARM (DARI TEST-FOR-U - TANPA SLIDER)
+-- 12. AUTO TICKET FARM
 -- ==============================================
 getgenv().TicketSystem = {
     AutoTicketFarm = false,
@@ -316,7 +459,7 @@ local AutoTicketToggle = AutoTab:Toggle({
 })
 
 -- ==============================================
--- 11. ANTI AFK (TAMBAHAN)
+-- 13. ANTI AFK
 -- ==============================================
 getgenv().AntiAFKEnabled = true
 getgenv().AntiAFKConnection = nil
@@ -341,7 +484,7 @@ local AntiAFKToggle = AutoTab:Toggle({
 })
 
 -- ==============================================
--- 12. NEXTBOT ESP (DARI TEST-FOR-U)
+-- 14. NEXTBOT ESP
 -- ==============================================
 _G.NextbotESPEnabled = false
 _G.NextbotESPThread = nil
@@ -392,7 +535,7 @@ EspTab:Button({
 })
 
 -- ==============================================
--- 13. DOWNED PLAYER ESP (SCRIPT LAMA)
+-- 15. DOWNED PLAYER ESP
 -- ==============================================
 local downedESPEnabled = false
 local downedBillboards = {}
@@ -439,7 +582,7 @@ local DownedESPToggle = EspTab:Toggle({
 })
 
 -- ==============================================
--- 14. ESP TICKET (DARI TEST-FOR-U - TANPA SLIDER)
+-- 16. ESP TICKET
 -- ==============================================
 getgenv().TicketESP = {
     Enabled = false,
@@ -521,7 +664,7 @@ EspTab:Button({
 })
 
 -- ==============================================
--- 15. NO CLIP (DARI PASTEPY)
+-- 17. NO CLIP
 -- ==============================================
 getgenv().NoClipEnabled = false
 getgenv().NoClipConnection = nil
@@ -549,7 +692,7 @@ local NoClipToggle = MiscTab:Toggle({
 })
 
 -- ==============================================
--- 16. REVIVE SYSTEM (MANUAL + AUTO + SELF)
+-- 18. REVIVE SYSTEM
 -- ==============================================
 getgenv().ReviveSystem = {
     Manual = { Enabled = false, Connection = nil },
@@ -567,7 +710,7 @@ local function isPlayerDowned(pl)
     return false
 end
 
--- Manual Instant Revive (harus deket)
+-- Manual Instant Revive
 local function startManualRevive()
     if getgenv().ReviveSystem.Manual.Connection then return end
     getgenv().ReviveSystem.Manual.Connection = RunService.Heartbeat:Connect(function()
@@ -589,7 +732,7 @@ local function startManualRevive()
     end)
 end
 
--- Auto Instant Revive (teleport)
+-- Auto Instant Revive
 local function startAutoRevive()
     if getgenv().ReviveSystem.Auto.Connection then return end
     getgenv().ReviveSystem.Auto.Connection = RunService.Heartbeat:Connect(function()
@@ -719,7 +862,7 @@ MiscTab:Dropdown({
 })
 
 -- ==============================================
--- 17. HEADLESS & KORBLOX (DARI SCRIPT LU)
+-- 19. HEADLESS & KORBLOX
 -- ==============================================
 getgenv().HeadlessKorblox = { Enabled = false, Connections = {} }
 local HEADLESS_MESH_ID = "rbxassetid://1095708"
@@ -786,7 +929,7 @@ VisualTab:Toggle({ Title = "Headless & Korblox", Desc = "Headless head + korblox
 })
 
 -- ==============================================
--- 18. ACCESSORY LOADER
+-- 20. ACCESSORY LOADER
 -- ==============================================
 getgenv().AccessoryLoader = { Enabled = false, AccessoryId = "", Connections = {} }
 local function applyAccessory(character, accessoryId)
@@ -817,7 +960,7 @@ VisualTab:Toggle({ Title = "Load Accessory", Desc = "Terapkan accessory", Value 
 })
 
 -- ==============================================
--- 19. CLOTHING LOADER
+-- 21. CLOTHING LOADER
 -- ==============================================
 getgenv().ClothingLoader = { ShirtId = "", PantsId = "", Enabled = false, Connections = {} }
 local function applyClothing(character, shirtId, pantsId)
@@ -854,7 +997,7 @@ VisualTab:Button({ Title = "Reset All Visual", Desc = "Reset semua efek visual",
 end })
 
 -- ==============================================
--- 20. TELEPORT 12 MAPS
+-- 22. TELEPORT 12 MAPS
 -- ==============================================
 local MapPositions = {
     ["Work Facility"] = Vector3.new(-88.174683, -200.634064, 855.514526),
@@ -886,53 +1029,15 @@ for _, mapName in ipairs(mapOrder) do
 end
 
 -- ==============================================
--- 21. KEYBIND SYSTEM
--- ==============================================
-getgenv().Keybinds = {
-    ToggleUI = Enum.KeyCode.RightBracket,
-    AutoTrimp = Enum.KeyCode.R,
-    AutoBhop = Enum.KeyCode.B,
-    AutoCarry = Enum.KeyCode.F,
-    ManualRevive = Enum.KeyCode.Unknown,
-    AutoRevive = Enum.KeyCode.Unknown,
-    SelfRevive = Enum.KeyCode.Unknown,
-}
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    local key = input.KeyCode
-    
-    if key == getgenv().Keybinds.ToggleUI then Window:Toggle() return end
-    if key == getgenv().Keybinds.AutoTrimp then toggleAutoTrimp() return end
-    if key == getgenv().Keybinds.AutoBhop then
-        local new = not getgenv().FeatureStates.BhopEnabled
-        getgenv().FeatureStates.BhopEnabled = new
-        if new then if not getgenv().BhopConnection then getgenv().BhopConnection = RunService.Heartbeat:Connect(handleBhop) end
-        else if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() getgenv().BhopConnection = nil end end
-        if BhopToggle then BhopToggle:Set(new) end
-        WindUI:Notify({ Title = "AutoBhop", Content = new and "ON" or "OFF", Duration = 1 })
-        return
-    end
-    if key == getgenv().Keybinds.AutoCarry then toggleAutoCarry() return end
-end)
-
-KeybindTab:Keybind({ Title = "Toggle UI Key", Value = "]", Callback = function(key) getgenv().Keybinds.ToggleUI = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoTrimp Key", Value = "R", Callback = function(key) getgenv().Keybinds.AutoTrimp = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoBhop Key", Value = "B", Callback = function(key) getgenv().Keybinds.AutoBhop = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoCarry Key", Value = "F", Callback = function(key) getgenv().Keybinds.AutoCarry = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "Manual Revive Key", Value = "", Callback = function(key) getgenv().Keybinds.ManualRevive = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "Auto Revive Key", Value = "", Callback = function(key) getgenv().Keybinds.AutoRevive = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "Self Revive Key", Value = "", Callback = function(key) getgenv().Keybinds.SelfRevive = Enum.KeyCode[key] end })
-
--- ==============================================
--- 22. CONFIG SYSTEM
+-- 23. CONFIG SYSTEM
 -- ==============================================
 local ConfigManager = Window.ConfigManager
 local currentConfigName = "CasaaSettings"
 local myConfig = ConfigManager:CreateConfig(currentConfigName)
 
 local configElements = {
-    AutoTrimp = AutoTrimpToggle,
+    AutoTrimpOld = AutoTrimpOldToggle,
+    AutoTrimpNew = AutoTrimpNewToggle,
     Bhop = BhopToggle,
     AutoCarry = AutoCarryToggle,
     DownedESP = DownedESPToggle,
@@ -1017,26 +1122,15 @@ ConfigTab:Button({ Title = "🗑️ Delete Config", Callback = function()
 end })
 
 -- ==============================================
--- 23. FLOATING BUTTONS (ANDROID)
--- ==============================================
-local trimpButton = createFloatingButton(
-    "TRIMP", UDim2.new(0, 20, 0, 150),
-    Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 0, 0),
-    function() return getgenv().FeatureStates.FrontJumpEnabled end,
-    toggleAutoTrimp
-)
-
-local carryButton = createFloatingButton(
-    "CARRY", UDim2.new(0, 20, 0, 220),
-    Color3.fromRGB(0, 200, 0), Color3.fromRGB(200, 0, 0),
-    function() return getgenv().autoCarryEnabled end,
-    toggleAutoCarry
-)
-
--- ==============================================
 -- 24. FINAL NOTIFICATION
 -- ==============================================
-WindUI:Notify({ Title = "Casaa Hub", Content = "Loaded! Tekan ] untuk toggle UI", Duration = 5 })
-print("✅ Casaa Hub Final Loaded! 35+ Fitur Siap!")
-print("📌 Fitur: AutoTrimp, Bhop, AutoCarry, ESP, Revive, Visual, Teleport, Config")
-print("📱 Android: Tombol TRIMP & CARRY bisa digeser!")
+WindUI:Notify({ 
+    Title = "Casaa Hub", 
+    Content = "Loaded! Tekan RightBracket untuk toggle UI", 
+    Duration = 5 
+})
+
+print("✅ Casaa Hub Final Loaded! + Mobile Bulet")
+print("📌 Keybind: RightBracket (UI), R (Trimp Old), F (Carry)")
+print("📌 Trimp New & Bhop: keybind kosong (isi sendiri di tab Keybind)")
+print("📱 Mobile: 2 tombol bulet TRIMP & CARRY (tab Mobile)")
