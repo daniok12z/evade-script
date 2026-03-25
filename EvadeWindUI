@@ -1,18 +1,20 @@
 --[[ 
-    CASAA HUB - EVADE (FULL + THIS-FOR-U LOGIC)
+    CASAA HUB - EVADE (FULL + AUTO TRIMP RESPAWN FIX)
     discord.gg/6UaRDjBY42
     Loader: WindUI (RAW VERSION)
     
-    📌 FITUR LENGKAP + TAMBAHAN:
-    [Auto] AutoTrimp Advanced, Auto Carry, Auto Ticket Farm, Auto Money Farm, Anti AFK
-    [Player] Front Jump, Infinite Slide, Speed/Jump Cap/Strafe Editor, Bhop Advanced, Emote Speed
+    📌 FITUR LENGKAP:
+    [Auto] AutoTrimp Advanced, Auto Carry, Auto Money Farm, Auto Ticket Farm, Anti AFK
+    [Player] Infinite Slide, Speed/Jump/Strafe Editor, Bhop Advanced
     [Esp] Nextbot ESP, Downed ESP, ESP Ticket
-    [Misc] No Clip, Manual Revive, Auto Revive, Self Revive
+    [Misc] No Clip, Revive System (Manual/Auto/Self)
     [Visual] Headless & Korblox, Accessory Loader, Clothing Loader
     [Teleport] 12 Map Teleport
     [Keybind] Keybind custom
     [Config] Save/Load Settings
     [Mobile] 2 Tombol BULET (TRIMP & CARRY)
+    
+    🔄 AutoTrimp akan mati otomatis saat respawn/next round!
 --]]
 
 -- ==============================================
@@ -102,7 +104,6 @@ local function toggleMobileUI()
     gui.Parent = game:GetService("CoreGui")
     gui.ResetOnSpawn = false
     
-    -- Tombol TRIMP
     local btnTrimp = Instance.new("ImageButton")
     btnTrimp.Size = UDim2.new(0, 70, 0, 70)
     btnTrimp.Position = UDim2.new(0, 20, 0, 150)
@@ -111,10 +112,7 @@ local function toggleMobileUI()
     btnTrimp.Image = "rbxassetid://3926305904"
     btnTrimp.Draggable = true
     btnTrimp.Parent = gui
-    
-    local cornerTrimp = Instance.new("UICorner")
-    cornerTrimp.CornerRadius = UDim.new(1, 0)
-    cornerTrimp.Parent = btnTrimp
+    Instance.new("UICorner", btnTrimp).CornerRadius = UDim.new(1, 0)
     
     local labelTrimp = Instance.new("TextLabel")
     labelTrimp.Size = UDim2.new(1, 0, 0, 20)
@@ -131,7 +129,6 @@ local function toggleMobileUI()
         btnTrimp.BackgroundColor3 = getgenv().AutoTrimpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end)
     
-    -- Tombol CARRY
     local btnCarry = Instance.new("ImageButton")
     btnCarry.Size = UDim2.new(0, 70, 0, 70)
     btnCarry.Position = UDim2.new(0, 20, 0, 240)
@@ -140,10 +137,7 @@ local function toggleMobileUI()
     btnCarry.Image = "rbxassetid://3926305904"
     btnCarry.Draggable = true
     btnCarry.Parent = gui
-    
-    local cornerCarry = Instance.new("UICorner")
-    cornerCarry.CornerRadius = UDim.new(1, 0)
-    cornerCarry.Parent = btnCarry
+    Instance.new("UICorner", btnCarry).CornerRadius = UDim.new(1, 0)
     
     local labelCarry = Instance.new("TextLabel")
     labelCarry.Size = UDim2.new(1, 0, 0, 20)
@@ -321,7 +315,7 @@ local function stopInfiniteSlide()
     setSlideFriction(5)
 end
 
-PlayerTab:Toggle({
+local InfiniteSlideToggle = PlayerTab:Toggle({
     Title = "Infinite Slide",
     Desc = "Slide tanpa batas (friction negatif)",
     Value = false,
@@ -356,7 +350,7 @@ PlayerTab:Input({
 PlayerTab:Divider()
 
 -- ==============================================
--- 8. AUTO TRIMP ADVANCED (DARI THIS-FOR-U)
+-- 8. AUTO TRIMP ADVANCED + RESPAWN FIX
 -- ==============================================
 getgenv().AutoTrimpEnabled = false
 getgenv().AutoTrimpSpeed = 50
@@ -466,16 +460,64 @@ local function AutoTrimpCleanup()
     getgenv().currentSpeed = getgenv().AutoTrimpSpeed
 end
 
+local function forceDisableAutoTrimp()
+    if getgenv().AutoTrimpEnabled then
+        getgenv().AutoTrimpEnabled = false
+        if getgenv().activeBV then
+            getgenv().activeBV:Destroy()
+            getgenv().activeBV = nil
+        end
+        if AutoTrimpToggle then
+            AutoTrimpToggle:Set(false)
+        end
+        if MobileUI.TrimpButton then
+            MobileUI.TrimpButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        end
+        print("🔴 AutoTrimp dimatikan otomatis (respawn)")
+    end
+end
+
+local function resetAirAccumulator()
+    getgenv().airAccumulator = 0
+    getgenv().airTotalTime = 0
+    getgenv().wasAir = false
+    getgenv().currentSpeed = getgenv().AutoTrimpSpeed
+end
+
+-- EVENT: Pas respawn, matiin AutoTrimp
+player.CharacterAdded:Connect(function(newChar)
+    task.wait(0.5)
+    forceDisableAutoTrimp()
+    resetAirAccumulator()
+    local speedometer = getSpeedometer()
+    if speedometer then
+        speedometer.Text = "0"
+    end
+    print("🟡 Karakter baru terdeteksi - AutoTrimp dimatikan")
+end)
+
+player.CharacterRemoving:Connect(function()
+    if getgenv().AutoTrimpEnabled then
+        getgenv().AutoTrimpEnabled = false
+        if getgenv().activeBV then
+            getgenv().activeBV:Destroy()
+            getgenv().activeBV = nil
+        end
+        print("🔴 AutoTrimp dimatikan (karakter mati)")
+    end
+end)
+
 function toggleAutoTrimp()
     local new = not getgenv().AutoTrimpEnabled
     getgenv().AutoTrimpEnabled = new
     if new then
         getgenv().AutoTrimpConnections["RenderStepped"] = RunService.RenderStepped:Connect(handleAutoTrimp)
+        WindUI:Notify({ Title = "AutoTrimp", Content = "ON - Speed: " .. getgenv().AutoTrimpSpeed, Duration = 2 })
     else
         AutoTrimpCleanup()
+        WindUI:Notify({ Title = "AutoTrimp", Content = "OFF", Duration = 1 })
     end
     if AutoTrimpToggle then AutoTrimpToggle:Set(new) end
-    WindUI:Notify({ Title = "AutoTrimp", Content = new and "ON" or "OFF", Duration = 1 })
     if MobileUI.TrimpButton then
         MobileUI.TrimpButton.BackgroundColor3 = new and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end
@@ -512,6 +554,8 @@ AutoTab:Input({
         end
     end
 })
+
+AutoTab:Divider()
 
 -- ==============================================
 -- 9. BHOP ADVANCED (DARI THIS-FOR-U)
@@ -590,7 +634,7 @@ local BhopToggle = AutoTab:Toggle({
 AutoTab:Divider()
 
 -- ==============================================
--- 10. AUTO CARRY (DARI THIS-FOR-U)
+-- 10. AUTO CARRY
 -- ==============================================
 getgenv().autoCarryEnabled = false
 getgenv().autoCarryConnection = nil
@@ -685,7 +729,7 @@ local function stopAutoMoneyFarm()
     end
 end
 
-AutoTab:Toggle({
+local AutoMoneyFarmToggle = AutoTab:Toggle({
     Title = "Auto Money Farm",
     Desc = "Revive player downed untuk uang",
     Value = false,
@@ -695,8 +739,6 @@ AutoTab:Toggle({
         WindUI:Notify({ Title = "Auto Money Farm", Content = state and "ON" or "OFF", Duration = 2 })
     end
 })
-
-AutoTab:Divider()
 
 -- ==============================================
 -- 12. AUTO TICKET FARM (DARI THIS-FOR-U)
@@ -744,7 +786,7 @@ local function stopAutoTicketFarm()
     end
 end
 
-AutoTab:Toggle({
+local AutoTicketFarmToggle = AutoTab:Toggle({
     Title = "Auto Ticket Farm",
     Desc = "Farm tiket otomatis",
     Value = false,
@@ -756,9 +798,9 @@ AutoTab:Toggle({
 })
 
 -- ==============================================
--- 13. ANTI AFK (VIRTUALUSER DARI THIS-FOR-U)
+-- 13. ANTI AFK (VIRTUALUSER)
 -- ==============================================
-getgenv().antiAFKEnabled = false
+getgenv().antiAFKEnabled = true
 getgenv().antiAFKConnection = nil
 
 local function startAntiAFK()
@@ -777,7 +819,7 @@ local function stopAntiAFK()
     end
 end
 
-AutoTab:Toggle({
+local AntiAFKToggle = AutoTab:Toggle({
     Title = "Anti AFK",
     Desc = "Cegah idle kick (VirtualUser)",
     Value = true,
@@ -797,7 +839,7 @@ end
 AutoTab:Button({ Title = "Teleport to Roof", Desc = "Naik 500 stud", Callback = teleportRoof })
 
 -- ==============================================
--- 15. NEXTBOT ESP (DARI TEST-FOR-U)
+-- 15. NEXTBOT ESP
 -- ==============================================
 _G.NextbotESPEnabled = false
 _G.NextbotESPThread = nil
@@ -1035,7 +1077,6 @@ local function isPlayerDowned(pl)
     return false
 end
 
--- Manual Instant Revive
 local function startManualRevive()
     if getgenv().ReviveSystem.Manual.Connection then return end
     getgenv().ReviveSystem.Manual.Connection = RunService.Heartbeat:Connect(function()
@@ -1057,7 +1098,6 @@ local function startManualRevive()
     end)
 end
 
--- Auto Instant Revive
 local function startAutoRevive()
     if getgenv().ReviveSystem.Auto.Connection then return end
     getgenv().ReviveSystem.Auto.Connection = RunService.Heartbeat:Connect(function()
@@ -1085,7 +1125,6 @@ local function startAutoRevive()
     end)
 end
 
--- Self Revive
 local function setupSelfRevive(character)
     if not character then return end
     task.defer(function()
@@ -1475,11 +1514,12 @@ end })
 -- ==============================================
 WindUI:Notify({ 
     Title = "Casaa Hub", 
-    Content = "Loaded! AutoTrimp Advanced + Infinite Slide + Auto Money Farm!", 
+    Content = "Loaded! AutoTrimp mati otomatis pas respawn!", 
     Duration = 5 
 })
 
-print("✅ Casaa Hub Final Loaded! + All features from this-for-u")
+print("✅ Casaa Hub Final Loaded! AutoTrimp mati otomatis saat respawn")
 print("📌 Fitur baru: Infinite Slide, Speed/Jump/Strafe Editor, Auto Money Farm, Anti AFK VirtualUser")
+print("📌 AutoTrimp akan mati otomatis setiap next round - harus toggle ulang!")
 print("📌 Keybind: R (Trimp), F (Carry), RightBracket (UI)")
 print("📱 Mobile: 2 tombol bulet TRIMP & CARRY (tab Mobile)")
