@@ -1,17 +1,18 @@
 --[[ 
-    CASAA HUB - EVADE (FULL + MOBILE BULET)
+    CASAA HUB - EVADE (FULL + THIS-FOR-U LOGIC)
     discord.gg/6UaRDjBY42
     Loader: WindUI (RAW VERSION)
     
-    📌 FITUR LENGKAP:
-    [Auto] AutoTrimp (R), AutoTrimp New (keybind kosong), Bhop (keybind kosong), Auto Carry (F), Teleport Roof, Auto Ticket Farm, Anti AFK
+    📌 FITUR LENGKAP + TAMBAHAN:
+    [Auto] AutoTrimp Advanced, Auto Carry, Auto Ticket Farm, Auto Money Farm, Anti AFK
+    [Player] Front Jump, Infinite Slide, Speed/Jump Cap/Strafe Editor, Bhop Advanced, Emote Speed
     [Esp] Nextbot ESP, Downed ESP, ESP Ticket
-    [Misc] No Clip, Manual Revive, Auto Revive, Self Revive (Auto/Instant)
+    [Misc] No Clip, Manual Revive, Auto Revive, Self Revive
     [Visual] Headless & Korblox, Accessory Loader, Clothing Loader
     [Teleport] 12 Map Teleport
-    [Keybind] Keybind bisa custom (New Trimp & Bhop siap diisi)
+    [Keybind] Keybind custom
     [Config] Save/Load Settings
-    [Mobile] 2 Tombol BULAT: TRIMP & CARRY (1x buat, 1x hapus)
+    [Mobile] 2 Tombol BULET (TRIMP & CARRY)
 --]]
 
 -- ==============================================
@@ -43,7 +44,7 @@ local Window = WindUI:CreateWindow({
     Icon = "bird",
     Author = "Evade",
     Folder = "CasaaHub/Evade",
-    Size = UDim2.fromOffset(620, 460),
+    Size = UDim2.fromOffset(620, 520),
     Transparent = true,
     Theme = "Dark",
     Resizable = true,
@@ -59,13 +60,16 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
 local player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local VirtualUser = game:GetService("VirtualUser")
 
 -- ==============================================
 -- 4. CREATE TABS
 -- ==============================================
 local AutoTab = Window:Tab({ Title = "Auto", Icon = "zap" })
+local PlayerTab = Window:Tab({ Title = "Player", Icon = "user" })
 local EspTab = Window:Tab({ Title = "Esp", Icon = "eye" })
 local MiscTab = Window:Tab({ Title = "Misc", Icon = "settings" })
 local VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })
@@ -84,7 +88,6 @@ local MobileUI = {
 }
 
 local function toggleMobileUI()
-    -- Kalo udah ada, hapus
     if MobileUI.Instance then
         MobileUI.Instance:Destroy()
         MobileUI.Instance = nil
@@ -94,77 +97,60 @@ local function toggleMobileUI()
         return
     end
     
-    -- Buat ScreenGui baru
     local gui = Instance.new("ScreenGui")
     gui.Name = "CasaaMobileUI"
     gui.Parent = game:GetService("CoreGui")
     gui.ResetOnSpawn = false
     
-    -- ==========================================
-    -- TOMBOL TRIMP (BULAT)
-    -- ==========================================
+    -- Tombol TRIMP
     local btnTrimp = Instance.new("ImageButton")
-    btnTrimp.Name = "TrimpButton"
     btnTrimp.Size = UDim2.new(0, 70, 0, 70)
     btnTrimp.Position = UDim2.new(0, 20, 0, 150)
-    btnTrimp.BackgroundColor3 = getgenv().FeatureStates and getgenv().FeatureStates.FrontJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    btnTrimp.BackgroundColor3 = getgenv().AutoTrimpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     btnTrimp.BackgroundTransparency = 0.2
     btnTrimp.Image = "rbxassetid://3926305904"
-    btnTrimp.ImageColor3 = Color3.fromRGB(255, 255, 255)
     btnTrimp.Draggable = true
-    btnTrimp.Active = true
     btnTrimp.Parent = gui
     
-    -- Bikin bulat
     local cornerTrimp = Instance.new("UICorner")
     cornerTrimp.CornerRadius = UDim.new(1, 0)
     cornerTrimp.Parent = btnTrimp
     
-    -- Label
     local labelTrimp = Instance.new("TextLabel")
     labelTrimp.Size = UDim2.new(1, 0, 0, 20)
     labelTrimp.Position = UDim2.new(0, 0, 1, 0)
     labelTrimp.BackgroundTransparency = 1
     labelTrimp.Text = "TRIMP"
     labelTrimp.TextColor3 = Color3.fromRGB(255, 255, 255)
-    labelTrimp.TextStrokeTransparency = 0.5
     labelTrimp.Font = Enum.Font.GothamBold
     labelTrimp.TextSize = 14
     labelTrimp.Parent = btnTrimp
     
     btnTrimp.MouseButton1Click:Connect(function()
         toggleAutoTrimp()
-        btnTrimp.BackgroundColor3 = getgenv().FeatureStates and getgenv().FeatureStates.FrontJumpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        btnTrimp.BackgroundColor3 = getgenv().AutoTrimpEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end)
     
-    -- ==========================================
-    -- TOMBOL CARRY (BULAT)
-    -- ==========================================
+    -- Tombol CARRY
     local btnCarry = Instance.new("ImageButton")
-    btnCarry.Name = "CarryButton"
     btnCarry.Size = UDim2.new(0, 70, 0, 70)
     btnCarry.Position = UDim2.new(0, 20, 0, 240)
     btnCarry.BackgroundColor3 = getgenv().autoCarryEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     btnCarry.BackgroundTransparency = 0.2
     btnCarry.Image = "rbxassetid://3926305904"
-    btnCarry.ImageColor3 = Color3.fromRGB(255, 255, 255)
     btnCarry.Draggable = true
-    btnCarry.Active = true
     btnCarry.Parent = gui
     
-    -- Bikin bulat
     local cornerCarry = Instance.new("UICorner")
     cornerCarry.CornerRadius = UDim.new(1, 0)
     cornerCarry.Parent = btnCarry
     
-    -- Label
     local labelCarry = Instance.new("TextLabel")
     labelCarry.Size = UDim2.new(1, 0, 0, 20)
     labelCarry.Position = UDim2.new(0, 0, 1, 0)
     labelCarry.BackgroundTransparency = 1
     labelCarry.Text = "CARRY"
     labelCarry.TextColor3 = Color3.fromRGB(255, 255, 255)
-    labelCarry.TextStrokeTransparency = 0.5
     labelCarry.Font = Enum.Font.GothamBold
     labelCarry.TextSize = 14
     labelCarry.Parent = btnCarry
@@ -180,175 +166,447 @@ local function toggleMobileUI()
     WindUI:Notify({ Title = "Mobile UI", Content = "Dibuat! Tekan toggle lagi untuk hapus", Duration = 3 })
 end
 
--- Toggle di tab Mobile
 MobileTab:Toggle({
     Title = "Mobile Bulet",
     Desc = "Tekan 1x buat (2 tombol), 1x hapus",
     Value = false,
     Callback = function(state)
         toggleMobileUI()
-        -- Balikin toggle ke false biar bisa dipencet lagi
         task.wait(0.1)
         MobileTab:SetToggle(false)
     end
 })
 
 -- ==============================================
--- 6. KEYBIND SYSTEM (NEW TRIMP & BHOP KOSONG)
+-- 6. MOVEMENT TABLES EDITOR (DARI THIS-FOR-U)
 -- ==============================================
-getgenv().Keybinds = {
-    ToggleUI = Enum.KeyCode.RightBracket,
-    AutoTrimpOld = Enum.KeyCode.R,        -- Trimp lama (R)
-    AutoTrimpNew = Enum.KeyCode.Unknown,   -- Trimp baru (keybind kosong)
-    AutoBhop = Enum.KeyCode.Unknown,       -- Bhop (keybind kosong)
-    AutoCarry = Enum.KeyCode.F,
-    ManualRevive = Enum.KeyCode.Unknown,
-    AutoRevive = Enum.KeyCode.Unknown,
-    SelfRevive = Enum.KeyCode.Unknown,
+local requiredFields = {
+    "Friction", "AirStrafeAcceleration", "JumpHeight", "RunDeaccel",
+    "JumpSpeedMultiplier", "JumpCap", "SprintCap", "WalkSpeedMultiplier",
+    "BhopEnabled", "Speed", "AirAcceleration", "RunAccel", "SprintAcceleration"
 }
 
--- Handler keybind
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    local key = input.KeyCode
-    
-    if key == getgenv().Keybinds.ToggleUI then Window:Toggle() return end
-    if key == getgenv().Keybinds.AutoTrimpOld then toggleAutoTrimp() return end
-    if key == getgenv().Keybinds.AutoCarry then toggleAutoCarry() return end
-    
-    -- Trimp New dan Bhop gak ada handler (keybind kosong, nanti diisi manual)
-end)
-
--- UI Keybind
-KeybindTab:Keybind({ Title = "Toggle UI Key", Value = "RightBracket", Callback = function(key) getgenv().Keybinds.ToggleUI = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoTrimp (Old)", Value = "R", Callback = function(key) getgenv().Keybinds.AutoTrimpOld = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoTrimp (New)", Value = "", Callback = function(key) getgenv().Keybinds.AutoTrimpNew = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoBhop", Value = "", Callback = function(key) getgenv().Keybinds.AutoBhop = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "AutoCarry", Value = "F", Callback = function(key) getgenv().Keybinds.AutoCarry = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "Manual Revive", Value = "", Callback = function(key) getgenv().Keybinds.ManualRevive = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "Auto Revive", Value = "", Callback = function(key) getgenv().Keybinds.AutoRevive = Enum.KeyCode[key] end })
-KeybindTab:Keybind({ Title = "Self Revive", Value = "", Callback = function(key) getgenv().Keybinds.SelfRevive = Enum.KeyCode[key] end })
-
--- ==============================================
--- 7. AUTO TRIMP (OLD) - TETEP
--- ==============================================
-getgenv().FeatureStates = getgenv().FeatureStates or {}
-getgenv().FeatureStates.FrontJumpEnabled = false
-getgenv().FeatureStates.FrontJumpSpeed = 50
-getgenv().frontJumpVelocity = nil
-
-local function startFrontJump()
-    if getgenv().frontJumpVelocity then getgenv().frontJumpVelocity:Destroy() end
-    local char, root = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not char or not root then return end
-    
-    getgenv().frontJumpVelocity = Instance.new("BodyVelocity")
-    getgenv().frontJumpVelocity.MaxForce = Vector3.new(400000, 0, 400000)
-    getgenv().frontJumpVelocity.P = 1250
-    getgenv().frontJumpVelocity.Parent = root
-
-    task.spawn(function()
-        while getgenv().FeatureStates.FrontJumpEnabled and getgenv().frontJumpVelocity and getgenv().frontJumpVelocity.Parent do
-            local forward = Camera.CFrame.LookVector
-            local direction = Vector3.new(forward.X, 0, forward.Z).Unit
-            if direction.Magnitude < 0.1 then direction = root.CFrame.LookVector; direction = Vector3.new(direction.X, 0, direction.Z).Unit end
-            getgenv().frontJumpVelocity.Velocity = direction * getgenv().FeatureStates.FrontJumpSpeed
-            task.wait(0.016)
+local function getMovementTables()
+    local matched = {}
+    for _, obj in pairs(getgc(true)) do
+        if typeof(obj) == "table" then
+            local ok = true
+            for _, field in ipairs(requiredFields) do
+                if rawget(obj, field) == nil then
+                    ok = false
+                    break
+                end
+            end
+            if ok then
+                table.insert(matched, obj)
+            end
         end
+    end
+    return matched
+end
+
+PlayerTab:Section({ Title = "Movement Editor", Icon = "zap" })
+
+PlayerTab:Input({
+    Title = "Speed",
+    Placeholder = "Default 1500",
+    Value = "1500",
+    Callback = function(input)
+        local val = tonumber(input)
+        if val and val > 0 then
+            local targets = getMovementTables()
+            for _, tbl in ipairs(targets) do
+                pcall(function() tbl.Speed = val end)
+            end
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Jump Cap",
+    Placeholder = "Default 1",
+    Value = "1",
+    Callback = function(input)
+        local val = tonumber(input)
+        if val and val > 0 then
+            local targets = getMovementTables()
+            for _, tbl in ipairs(targets) do
+                pcall(function() tbl.JumpCap = val end)
+            end
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Strafe Acceleration",
+    Placeholder = "Default 187",
+    Value = "187",
+    Callback = function(input)
+        local val = tonumber(input)
+        if val and val > 0 then
+            local targets = getMovementTables()
+            for _, tbl in ipairs(targets) do
+                pcall(function() tbl.AirStrafeAcceleration = val end)
+            end
+        end
+    end
+})
+
+PlayerTab:Divider()
+
+-- ==============================================
+-- 7. INFINITE SLIDE (DARI THIS-FOR-U)
+-- ==============================================
+getgenv().slideFrictionValue = -8
+getgenv().movementTables = {}
+getgenv().infiniteSlideEnabled = false
+getgenv().infiniteSlideConnection = nil
+
+local function hasRequiredFieldsForSlide(tbl)
+    if typeof(tbl) ~= "table" then return false end
+    for _, key in ipairs({"Friction", "AirStrafeAcceleration", "JumpHeight", "RunDeaccel"}) do
+        if rawget(tbl, key) == nil then return false end
+    end
+    return true
+end
+
+local function findMovementTablesForSlide()
+    getgenv().movementTables = {}
+    for _, obj in pairs(getgc(true)) do
+        if hasRequiredFieldsForSlide(obj) then
+            table.insert(getgenv().movementTables, obj)
+        end
+    end
+    return #getgenv().movementTables > 0
+end
+
+local function setSlideFriction(value)
+    for _, tbl in ipairs(getgenv().movementTables) do
+        pcall(function() tbl.Friction = value end)
+    end
+end
+
+local function getPlayerModel()
+    local gameFolder = workspace:FindFirstChild("Game")
+    if not gameFolder then return nil end
+    local playersFolder = gameFolder:FindFirstChild("Players")
+    if not playersFolder then return nil end
+    return playersFolder:FindFirstChild(player.Name)
+end
+
+local function infiniteSlideLoop()
+    if not getgenv().infiniteSlideEnabled then return end
+    local playerModel = getPlayerModel()
+    if playerModel then
+        local state = playerModel:GetAttribute("State")
+        if state == "Slide" or state == "EmotingSlide" then
+            setSlideFriction(getgenv().slideFrictionValue)
+        else
+            setSlideFriction(5)
+        end
+    end
+end
+
+local function startInfiniteSlide()
+    if getgenv().infiniteSlideConnection then return end
+    findMovementTablesForSlide()
+    getgenv().infiniteSlideConnection = RunService.Heartbeat:Connect(infiniteSlideLoop)
+end
+
+local function stopInfiniteSlide()
+    if getgenv().infiniteSlideConnection then
+        getgenv().infiniteSlideConnection:Disconnect()
+        getgenv().infiniteSlideConnection = nil
+    end
+    setSlideFriction(5)
+end
+
+PlayerTab:Toggle({
+    Title = "Infinite Slide",
+    Desc = "Slide tanpa batas (friction negatif)",
+    Value = false,
+    Callback = function(state)
+        getgenv().infiniteSlideEnabled = state
+        if state then
+            startInfiniteSlide()
+            WindUI:Notify({ Title = "Infinite Slide", Content = "ON", Duration = 2 })
+        else
+            stopInfiniteSlide()
+            WindUI:Notify({ Title = "Infinite Slide", Content = "OFF", Duration = 2 })
+        end
+    end
+})
+
+PlayerTab:Input({
+    Title = "Slide Friction",
+    Desc = "Negative = lebih cepat",
+    Placeholder = "-8",
+    Value = "-8",
+    Callback = function(value)
+        local num = tonumber(value)
+        if num and num < 0 then
+            getgenv().slideFrictionValue = num
+            if getgenv().infiniteSlideEnabled then
+                setSlideFriction(num)
+            end
+        end
+    end
+})
+
+PlayerTab:Divider()
+
+-- ==============================================
+-- 8. AUTO TRIMP ADVANCED (DARI THIS-FOR-U)
+-- ==============================================
+getgenv().AutoTrimpEnabled = false
+getgenv().AutoTrimpSpeed = 50
+getgenv().maxExtraSpeed = 100
+getgenv().minSpeedOffset = 0
+getgenv().lastTick = tick()
+getgenv().airAccumulator = 0
+getgenv().airTotalTime = 0
+getgenv().wasAir = false
+getgenv().activeBV = nil
+getgenv().currentSpeed = getgenv().AutoTrimpSpeed
+getgenv().AutoTrimpConnections = {}
+
+local function truncate1Decimal(val)
+    return math.floor(val * 10) / 10
+end
+
+local function getSpeedometer()
+    local ok, spd = pcall(function()
+        return player.PlayerGui.Shared.HUD.Overlay.Default.CharacterInfo.Item.Speedometer.Players
     end)
+    if ok then return spd end
+    return nil
+end
+
+local function handleAutoTrimp()
+    local deltaTime = tick() - getgenv().lastTick
+    getgenv().lastTick = tick()
+
+    local char = player.Character
+    if not char then return end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChild("Humanoid")
+    if not root or not humanoid then return end
+    
+    local speedometer = getSpeedometer()
+    local isAir = humanoid.FloorMaterial == Enum.Material.Air
+    
+    if getgenv().wasAir and not isAir then
+        getgenv().currentSpeed = math.max(getgenv().AutoTrimpSpeed - getgenv().minSpeedOffset, getgenv().currentSpeed - 10)
+        if speedometer then 
+            speedometer.Text = tostring(truncate1Decimal(getgenv().currentSpeed)) 
+        end
+        getgenv().airTotalTime = 0
+    end
+    getgenv().wasAir = isAir
+    
+    if getgenv().AutoTrimpEnabled then
+        if isAir then
+            getgenv().airAccumulator = getgenv().airAccumulator + deltaTime
+            getgenv().airTotalTime = getgenv().airTotalTime + deltaTime
+            while getgenv().airAccumulator >= 0.04 do
+                getgenv().airAccumulator = getgenv().airAccumulator - 0.04
+                local increment = math.max(0.1, 2.5 * (0.04 / 1))
+                getgenv().currentSpeed = math.min(getgenv().AutoTrimpSpeed + getgenv().maxExtraSpeed, getgenv().currentSpeed + increment)
+            end
+        else
+            getgenv().airAccumulator = 0
+            getgenv().currentSpeed = math.max(getgenv().AutoTrimpSpeed - getgenv().minSpeedOffset, getgenv().currentSpeed - 4 * deltaTime)
+            getgenv().airTotalTime = 0
+        end
+        
+        if getgenv().activeBV then 
+            getgenv().activeBV:Destroy() 
+            getgenv().activeBV = nil
+        end
+        
+        local lookDir = Camera.CFrame.LookVector
+        lookDir = Vector3.new(lookDir.X, 0, lookDir.Z)
+        if lookDir.Magnitude ~= 0 then
+            lookDir = lookDir.Unit
+        end
+        
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = lookDir * getgenv().currentSpeed
+        bv.MaxForce = Vector3.new(4e5, 0, 4e5)
+        bv.P = 1250
+        bv.Parent = root
+        Debris:AddItem(bv, 0.1)
+        getgenv().activeBV = bv
+        
+        if speedometer then 
+            speedometer.Text = tostring(truncate1Decimal(getgenv().currentSpeed)) 
+        end
+    else
+        if getgenv().activeBV then 
+            getgenv().activeBV:Destroy() 
+            getgenv().activeBV = nil
+        end
+        getgenv().currentSpeed = getgenv().AutoTrimpSpeed
+        getgenv().airAccumulator = 0
+        getgenv().airTotalTime = 0
+        getgenv().wasAir = false
+    end
+end
+
+local function AutoTrimpCleanup()
+    for _, conn in pairs(getgenv().AutoTrimpConnections) do
+        if conn then conn:Disconnect() end
+    end
+    getgenv().AutoTrimpConnections = {}
+    if getgenv().activeBV then
+        getgenv().activeBV:Destroy()
+        getgenv().activeBV = nil
+    end
+    getgenv().currentSpeed = getgenv().AutoTrimpSpeed
 end
 
 function toggleAutoTrimp()
-    local new = not getgenv().FeatureStates.FrontJumpEnabled
-    getgenv().FeatureStates.FrontJumpEnabled = new
-    if new then startFrontJump() else
-        if getgenv().frontJumpVelocity then getgenv().frontJumpVelocity:Destroy() getgenv().frontJumpVelocity = nil end
+    local new = not getgenv().AutoTrimpEnabled
+    getgenv().AutoTrimpEnabled = new
+    if new then
+        getgenv().AutoTrimpConnections["RenderStepped"] = RunService.RenderStepped:Connect(handleAutoTrimp)
+    else
+        AutoTrimpCleanup()
     end
-    if AutoTrimpOldToggle then AutoTrimpOldToggle:Set(new) end
-    WindUI:Notify({ Title = "AutoTrimp (Old)", Content = new and "ON" or "OFF", Duration = 1 })
-    
-    -- Update mobile button kalo ada
+    if AutoTrimpToggle then AutoTrimpToggle:Set(new) end
+    WindUI:Notify({ Title = "AutoTrimp", Content = new and "ON" or "OFF", Duration = 1 })
     if MobileUI.TrimpButton then
         MobileUI.TrimpButton.BackgroundColor3 = new and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end
 end
 
-local AutoTrimpOldToggle = AutoTab:Toggle({
-    Title = "AutoTrimp (Old)", Desc = "Front Jump (R)", Value = false,
+local AutoTrimpToggle = AutoTab:Toggle({
+    Title = "AutoTrimp",
+    Desc = "Air accumulator + speedometer sync (R)",
+    Value = false,
     Callback = toggleAutoTrimp
 })
 
 AutoTab:Input({
-    Title = "Trimp Speed", Placeholder = "Default 50", Value = "50",
-    Callback = function(input) local val = tonumber(input); if val and val > 0 then getgenv().FeatureStates.FrontJumpSpeed = val end end
+    Title = "Base Speed",
+    Placeholder = "Default 50",
+    Value = "50",
+    Callback = function(value)
+        local num = tonumber(value)
+        if num and num > 0 then
+            getgenv().AutoTrimpSpeed = num
+            getgenv().currentSpeed = num
+        end
+    end
 })
 
--- ==============================================
--- 8. AUTO TRIMP (NEW) - FITUR TETEP ADA, KEYBIND KOSONG
--- ==============================================
-local AutoTrimpNewToggle = AutoTab:Toggle({
-    Title = "AutoTrimp (New)", 
-    Desc = "Fitur baru (keybind kosong)", 
-    Value = false,
-    Callback = function(state)
-        -- Nanti diisi sama lu
-        if state then
-            WindUI:Notify({ Title = "Trimp New", Content = "Fitur siap, isi keybind di tab Keybind", Duration = 2 })
-        else
-            WindUI:Notify({ Title = "Trimp New", Content = "OFF", Duration = 1 })
+AutoTab:Input({
+    Title = "Max Extra Speed",
+    Placeholder = "Default 100",
+    Value = "100",
+    Callback = function(value)
+        local num = tonumber(value)
+        if num and num >= 0 then
+            getgenv().maxExtraSpeed = num
         end
     end
 })
 
 -- ==============================================
--- 9. BHOP - FITUR TETEP ADA, KEYBIND KOSONG
+-- 9. BHOP ADVANCED (DARI THIS-FOR-U)
 -- ==============================================
-getgenv().FeatureStates.BhopEnabled = false
-getgenv().BhopConnection = nil
+getgenv().bhopEnabled = false
+getgenv().bhopHoldActive = false
+local jumpCooldown = 0
+local LastJump = 0
+local GROUND_CHECK_DISTANCE = 4
+local MAX_SLOPE_ANGLE = 45
 
-local function handleBhop()
-    if not getgenv().FeatureStates.BhopEnabled then return end
-    local char, humanoid, root = player.Character, player.Character and player.Character:FindFirstChildOfClass("Humanoid"), player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not char or not humanoid or not root then return end
-    local ray = Ray.new(root.Position, Vector3.new(0, -4, 0))
-    local hit = workspace:FindPartOnRayWithIgnoreList(ray, {char})
-    if hit and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+local Character = nil
+local Humanoid = nil
+local HumanoidRootPart = nil
+
+local function IsOnGround()
+    if not Character or not HumanoidRootPart or not Humanoid then return false end
+    local state = Humanoid:GetState()
+    if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then
+        return false
+    end
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {Character}
+    local raycastResult = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -GROUND_CHECK_DISTANCE, 0), raycastParams)
+    if not raycastResult then return false end
+    local angle = math.deg(math.acos(raycastResult.Normal:Dot(Vector3.new(0, 1, 0))))
+    return angle <= MAX_SLOPE_ANGLE
 end
 
+local function updateBhop()
+    local isActive = getgenv().bhopEnabled or getgenv().bhopHoldActive
+    if isActive and Humanoid and IsOnGround() and (tick() - LastJump) > jumpCooldown then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        LastJump = tick()
+    end
+end
+
+player.CharacterAdded:Connect(function(character)
+    Character = character
+    Humanoid = character:WaitForChild("Humanoid")
+    HumanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+if player.Character then
+    Character = player.Character
+    Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Space then
+        getgenv().bhopHoldActive = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        getgenv().bhopHoldActive = false
+    end
+end)
+
+local bhopConnection = RunService.Heartbeat:Connect(updateBhop)
+
 local BhopToggle = AutoTab:Toggle({
-    Title = "Bhop", 
-    Desc = "Auto jump (keybind kosong)", 
+    Title = "Bhop Advanced",
+    Desc = "Auto jump dengan slope detection (keybind kosong)",
     Value = false,
     Callback = function(state)
-        getgenv().FeatureStates.BhopEnabled = state
-        if state then
-            if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() end
-            getgenv().BhopConnection = RunService.Heartbeat:Connect(handleBhop)
-            WindUI:Notify({ Title = "Bhop", Content = "ON - Isi keybind di tab Keybind", Duration = 1 })
-        else
-            if getgenv().BhopConnection then getgenv().BhopConnection:Disconnect() getgenv().BhopConnection = nil end
-            WindUI:Notify({ Title = "Bhop", Content = "OFF", Duration = 1 })
-        end
+        getgenv().bhopEnabled = state
+        WindUI:Notify({ Title = "Bhop", Content = state and "ON" or "OFF", Duration = 1 })
     end
 })
 
+AutoTab:Divider()
+
 -- ==============================================
--- 10. AUTO CARRY (TETEP)
+-- 10. AUTO CARRY (DARI THIS-FOR-U)
 -- ==============================================
 getgenv().autoCarryEnabled = false
 getgenv().autoCarryConnection = nil
+local InteractRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Character") and ReplicatedStorage.Events.Character:FindFirstChild("Interact")
 
 local function startAutoCarry()
     if getgenv().autoCarryConnection then return end
     getgenv().autoCarryConnection = RunService.Heartbeat:Connect(function()
         if not getgenv().autoCarryEnabled then return end
         local char, hrp = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+        if not hrp or not InteractRemote then return end
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
                 local dist = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                 if dist <= 20 then
-                    pcall(function() ReplicatedStorage.Events.Character.Interact:FireServer("Carry", nil, plr.Name) end)
+                    pcall(function() InteractRemote:FireServer("Carry", nil, plr.Name) end)
                     task.wait(0.05)
                 end
             end
@@ -357,7 +615,10 @@ local function startAutoCarry()
 end
 
 local function stopAutoCarry()
-    if getgenv().autoCarryConnection then getgenv().autoCarryConnection:Disconnect() getgenv().autoCarryConnection = nil end
+    if getgenv().autoCarryConnection then
+        getgenv().autoCarryConnection:Disconnect()
+        getgenv().autoCarryConnection = nil
+    end
 end
 
 function toggleAutoCarry()
@@ -366,20 +627,168 @@ function toggleAutoCarry()
     if new then startAutoCarry() else stopAutoCarry() end
     if AutoCarryToggle then AutoCarryToggle:Set(new) end
     WindUI:Notify({ Title = "AutoCarry", Content = new and "ON" or "OFF", Duration = 1 })
-    
-    -- Update mobile button kalo ada
     if MobileUI.CarryButton then
         MobileUI.CarryButton.BackgroundColor3 = new and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end
 end
 
 local AutoCarryToggle = AutoTab:Toggle({
-    Title = "Auto Carry", Desc = "Carry nearby players", Value = false,
+    Title = "Auto Carry",
+    Desc = "Carry nearby players (F)",
+    Value = false,
     Callback = toggleAutoCarry
 })
 
 -- ==============================================
--- 11. TELEPORT ROOF
+-- 11. AUTO MONEY FARM (DARI THIS-FOR-U)
+-- ==============================================
+getgenv().autoMoneyFarmEnabled = false
+getgenv().autoMoneyFarmConnection = nil
+
+local function startAutoMoneyFarm()
+    if getgenv().autoMoneyFarmConnection then return end
+    getgenv().autoMoneyFarmConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().autoMoneyFarmEnabled then return end
+        local char, root = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        if char:GetAttribute("Downed") then
+            pcall(function() ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true) end)
+            return
+        end
+        
+        local playersInGame = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+        if playersInGame then
+            for _, playerModel in ipairs(playersInGame:GetChildren()) do
+                if playerModel:IsA("Model") and playerModel.Name ~= player.Name then
+                    if playerModel:GetAttribute("Downed") == true then
+                        local targetHRP = playerModel:FindFirstChild("HumanoidRootPart")
+                        if targetHRP then
+                            root.CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)
+                            pcall(function()
+                                ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, playerModel.Name)
+                            end)
+                            task.wait(0.5)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function stopAutoMoneyFarm()
+    if getgenv().autoMoneyFarmConnection then
+        getgenv().autoMoneyFarmConnection:Disconnect()
+        getgenv().autoMoneyFarmConnection = nil
+    end
+end
+
+AutoTab:Toggle({
+    Title = "Auto Money Farm",
+    Desc = "Revive player downed untuk uang",
+    Value = false,
+    Callback = function(state)
+        getgenv().autoMoneyFarmEnabled = state
+        if state then startAutoMoneyFarm() else stopAutoMoneyFarm() end
+        WindUI:Notify({ Title = "Auto Money Farm", Content = state and "ON" or "OFF", Duration = 2 })
+    end
+})
+
+AutoTab:Divider()
+
+-- ==============================================
+-- 12. AUTO TICKET FARM (DARI THIS-FOR-U)
+-- ==============================================
+getgenv().autoTicketFarmEnabled = false
+getgenv().autoTicketFarmConnection = nil
+local securityPart = workspace:FindFirstChild("SecurityPart")
+
+local function startAutoTicketFarm()
+    if getgenv().autoTicketFarmConnection then return end
+    if not securityPart then return end
+    
+    getgenv().autoTicketFarmConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().autoTicketFarmEnabled then return end
+        local char, root = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        if char:GetAttribute("Downed") then
+            pcall(function() ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true) end)
+            root.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
+            return
+        end
+        
+        local tickets = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Effects") and workspace.Game.Effects:FindFirstChild("Tickets")
+        if tickets then
+            local activeTickets = tickets:GetChildren()
+            if #activeTickets > 0 then
+                local ticketPart = activeTickets[1]:FindFirstChild("HumanoidRootPart")
+                if ticketPart then
+                    root.CFrame = ticketPart.CFrame
+                end
+            else
+                root.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
+            end
+        else
+            root.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
+        end
+    end)
+end
+
+local function stopAutoTicketFarm()
+    if getgenv().autoTicketFarmConnection then
+        getgenv().autoTicketFarmConnection:Disconnect()
+        getgenv().autoTicketFarmConnection = nil
+    end
+end
+
+AutoTab:Toggle({
+    Title = "Auto Ticket Farm",
+    Desc = "Farm tiket otomatis",
+    Value = false,
+    Callback = function(state)
+        getgenv().autoTicketFarmEnabled = state
+        if state then startAutoTicketFarm() else stopAutoTicketFarm() end
+        WindUI:Notify({ Title = "Auto Ticket Farm", Content = state and "ON" or "OFF", Duration = 2 })
+    end
+})
+
+-- ==============================================
+-- 13. ANTI AFK (VIRTUALUSER DARI THIS-FOR-U)
+-- ==============================================
+getgenv().antiAFKEnabled = false
+getgenv().antiAFKConnection = nil
+
+local function startAntiAFK()
+    if getgenv().antiAFKConnection then return end
+    getgenv().antiAFKConnection = player.Idled:Connect(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    end)
+end
+
+local function stopAntiAFK()
+    if getgenv().antiAFKConnection then
+        getgenv().antiAFKConnection:Disconnect()
+        getgenv().antiAFKConnection = nil
+    end
+end
+
+AutoTab:Toggle({
+    Title = "Anti AFK",
+    Desc = "Cegah idle kick (VirtualUser)",
+    Value = true,
+    Callback = function(state)
+        getgenv().antiAFKEnabled = state
+        if state then startAntiAFK() else stopAntiAFK() end
+    end
+})
+
+-- ==============================================
+-- 14. TELEPORT ROOF
 -- ==============================================
 local function teleportRoof()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -388,103 +797,7 @@ end
 AutoTab:Button({ Title = "Teleport to Roof", Desc = "Naik 500 stud", Callback = teleportRoof })
 
 -- ==============================================
--- 12. AUTO TICKET FARM
--- ==============================================
-getgenv().TicketSystem = {
-    AutoTicketFarm = false,
-    Collected = 0,
-    AutoConnection = nil
-}
-
-local function findTickets()
-    local tickets = {}
-    local gameFolder = workspace:FindFirstChild("Game")
-    if gameFolder then
-        local ticketsFolder = gameFolder:FindFirstChild("Tickets")
-        if ticketsFolder then
-            for _, v in ipairs(ticketsFolder:GetChildren()) do
-                if v:IsA("BasePart") and v.Transparency < 1 then
-                    table.insert(tickets, v)
-                end
-            end
-        end
-    end
-    local ticketsFolder = workspace:FindFirstChild("Tickets")
-    if ticketsFolder then
-        for _, v in ipairs(ticketsFolder:GetChildren()) do
-            if v:IsA("BasePart") and v.Transparency < 1 then
-                table.insert(tickets, v)
-            end
-        end
-    end
-    return tickets
-end
-
-local function startAutoTicketFarm()
-    if getgenv().TicketSystem.AutoConnection then return end
-    getgenv().TicketSystem.AutoConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().TicketSystem.AutoTicketFarm then return end
-        local char, hrp = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        local tickets = findTickets()
-        for _, ticket in ipairs(tickets) do
-            hrp.CFrame = ticket.CFrame + Vector3.new(0, 2, 0)
-            getgenv().TicketSystem.Collected = getgenv().TicketSystem.Collected + 1
-            task.wait(0.2)
-        end
-    end)
-end
-
-local function stopAutoTicketFarm()
-    if getgenv().TicketSystem.AutoConnection then
-        getgenv().TicketSystem.AutoConnection:Disconnect()
-        getgenv().TicketSystem.AutoConnection = nil
-    end
-end
-
-local AutoTicketToggle = AutoTab:Toggle({
-    Title = "Auto Ticket Farm",
-    Desc = "Otomatis ambil semua tiket",
-    Value = false,
-    Callback = function(state)
-        getgenv().TicketSystem.AutoTicketFarm = state
-        if state then
-            startAutoTicketFarm()
-            WindUI:Notify({ Title = "Auto Ticket", Content = "ON", Duration = 2 })
-        else
-            stopAutoTicketFarm()
-            WindUI:Notify({ Title = "Auto Ticket", Content = "OFF - Collected: " .. getgenv().TicketSystem.Collected, Duration = 2 })
-        end
-    end
-})
-
--- ==============================================
--- 13. ANTI AFK
--- ==============================================
-getgenv().AntiAFKEnabled = true
-getgenv().AntiAFKConnection = nil
-
-local function startAntiAFK()
-    if getgenv().AntiAFKConnection then return end
-    getgenv().AntiAFKConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().AntiAFKEnabled then return end
-        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid:Move(Vector3.new(0,0,0), false) end
-    end)
-end
-
-local AntiAFKToggle = AutoTab:Toggle({
-    Title = "Anti AFK", Desc = "Cegah kick karena idle", Value = true,
-    Callback = function(state)
-        getgenv().AntiAFKEnabled = state
-        if state then startAntiAFK() else
-            if getgenv().AntiAFKConnection then getgenv().AntiAFKConnection:Disconnect() getgenv().AntiAFKConnection = nil end
-        end
-    end
-})
-
--- ==============================================
--- 14. NEXTBOT ESP
+-- 15. NEXTBOT ESP (DARI TEST-FOR-U)
 -- ==============================================
 _G.NextbotESPEnabled = false
 _G.NextbotESPThread = nil
@@ -535,7 +848,7 @@ EspTab:Button({
 })
 
 -- ==============================================
--- 15. DOWNED PLAYER ESP
+-- 16. DOWNED PLAYER ESP
 -- ==============================================
 local downedESPEnabled = false
 local downedBillboards = {}
@@ -582,13 +895,37 @@ local DownedESPToggle = EspTab:Toggle({
 })
 
 -- ==============================================
--- 16. ESP TICKET
+-- 17. ESP TICKET
 -- ==============================================
 getgenv().TicketESP = {
     Enabled = false,
     Billboards = {},
     Connections = {}
 }
+
+local function findTickets()
+    local tickets = {}
+    local gameFolder = workspace:FindFirstChild("Game")
+    if gameFolder then
+        local ticketsFolder = gameFolder:FindFirstChild("Tickets")
+        if ticketsFolder then
+            for _, v in ipairs(ticketsFolder:GetChildren()) do
+                if v:IsA("BasePart") and v.Transparency < 1 then
+                    table.insert(tickets, v)
+                end
+            end
+        end
+    end
+    local ticketsFolder = workspace:FindFirstChild("Tickets")
+    if ticketsFolder then
+        for _, v in ipairs(ticketsFolder:GetChildren()) do
+            if v:IsA("BasePart") and v.Transparency < 1 then
+                table.insert(tickets, v)
+            end
+        end
+    end
+    return tickets
+end
 
 local function createTicketESP(ticket)
     if not ticket or not ticket:IsA("BasePart") then return end
@@ -651,20 +988,8 @@ EspTab:Toggle({
     end
 })
 
-EspTab:Button({
-    Title = "📊 Ticket Stats",
-    Desc = "Total tiket terkumpul: " .. getgenv().TicketSystem.Collected,
-    Callback = function()
-        WindUI:Popup({
-            Title = "Ticket Stats",
-            Content = "Total terkumpul: " .. getgenv().TicketSystem.Collected .. " tiket",
-            Buttons = { { Title = "OK" } }
-        })
-    end
-})
-
 -- ==============================================
--- 17. NO CLIP
+-- 18. NO CLIP
 -- ==============================================
 getgenv().NoClipEnabled = false
 getgenv().NoClipConnection = nil
@@ -692,7 +1017,7 @@ local NoClipToggle = MiscTab:Toggle({
 })
 
 -- ==============================================
--- 18. REVIVE SYSTEM
+-- 19. REVIVE SYSTEM (MANUAL + AUTO + SELF)
 -- ==============================================
 getgenv().ReviveSystem = {
     Manual = { Enabled = false, Connection = nil },
@@ -862,7 +1187,7 @@ MiscTab:Dropdown({
 })
 
 -- ==============================================
--- 19. HEADLESS & KORBLOX
+-- 20. HEADLESS & KORBLOX
 -- ==============================================
 getgenv().HeadlessKorblox = { Enabled = false, Connections = {} }
 local HEADLESS_MESH_ID = "rbxassetid://1095708"
@@ -929,7 +1254,7 @@ VisualTab:Toggle({ Title = "Headless & Korblox", Desc = "Headless head + korblox
 })
 
 -- ==============================================
--- 20. ACCESSORY LOADER
+-- 21. ACCESSORY LOADER
 -- ==============================================
 getgenv().AccessoryLoader = { Enabled = false, AccessoryId = "", Connections = {} }
 local function applyAccessory(character, accessoryId)
@@ -960,7 +1285,7 @@ VisualTab:Toggle({ Title = "Load Accessory", Desc = "Terapkan accessory", Value 
 })
 
 -- ==============================================
--- 21. CLOTHING LOADER
+-- 22. CLOTHING LOADER
 -- ==============================================
 getgenv().ClothingLoader = { ShirtId = "", PantsId = "", Enabled = false, Connections = {} }
 local function applyClothing(character, shirtId, pantsId)
@@ -997,7 +1322,7 @@ VisualTab:Button({ Title = "Reset All Visual", Desc = "Reset semua efek visual",
 end })
 
 -- ==============================================
--- 22. TELEPORT 12 MAPS
+-- 23. TELEPORT 12 MAPS
 -- ==============================================
 local MapPositions = {
     ["Work Facility"] = Vector3.new(-88.174683, -200.634064, 855.514526),
@@ -1029,21 +1354,45 @@ for _, mapName in ipairs(mapOrder) do
 end
 
 -- ==============================================
--- 23. CONFIG SYSTEM
+-- 24. KEYBIND SYSTEM
+-- ==============================================
+getgenv().Keybinds = {
+    ToggleUI = Enum.KeyCode.RightBracket,
+    AutoTrimp = Enum.KeyCode.R,
+    AutoBhop = Enum.KeyCode.Unknown,
+    AutoCarry = Enum.KeyCode.F,
+}
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    local key = input.KeyCode
+    if key == getgenv().Keybinds.ToggleUI then Window:Toggle() return end
+    if key == getgenv().Keybinds.AutoTrimp then toggleAutoTrimp() return end
+    if key == getgenv().Keybinds.AutoCarry then toggleAutoCarry() return end
+end)
+
+KeybindTab:Keybind({ Title = "Toggle UI Key", Value = "RightBracket", Callback = function(key) getgenv().Keybinds.ToggleUI = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoTrimp", Value = "R", Callback = function(key) getgenv().Keybinds.AutoTrimp = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoBhop", Value = "", Callback = function(key) getgenv().Keybinds.AutoBhop = Enum.KeyCode[key] end })
+KeybindTab:Keybind({ Title = "AutoCarry", Value = "F", Callback = function(key) getgenv().Keybinds.AutoCarry = Enum.KeyCode[key] end })
+
+-- ==============================================
+-- 25. CONFIG SYSTEM
 -- ==============================================
 local ConfigManager = Window.ConfigManager
 local currentConfigName = "CasaaSettings"
 local myConfig = ConfigManager:CreateConfig(currentConfigName)
 
 local configElements = {
-    AutoTrimpOld = AutoTrimpOldToggle,
-    AutoTrimpNew = AutoTrimpNewToggle,
+    AutoTrimp = AutoTrimpToggle,
     Bhop = BhopToggle,
     AutoCarry = AutoCarryToggle,
     DownedESP = DownedESPToggle,
     NoClip = NoClipToggle,
     AntiAFK = AntiAFKToggle,
-    AutoTicket = AutoTicketToggle,
+    AutoTicketFarm = AutoTicketFarmToggle,
+    AutoMoneyFarm = AutoMoneyFarmToggle,
+    InfiniteSlide = InfiniteSlideToggle,
 }
 
 for flagName, element in pairs(configElements) do
@@ -1122,15 +1471,15 @@ ConfigTab:Button({ Title = "🗑️ Delete Config", Callback = function()
 end })
 
 -- ==============================================
--- 24. FINAL NOTIFICATION
+-- 26. FINAL NOTIFICATION
 -- ==============================================
 WindUI:Notify({ 
     Title = "Casaa Hub", 
-    Content = "Loaded! Tekan RightBracket untuk toggle UI", 
+    Content = "Loaded! AutoTrimp Advanced + Infinite Slide + Auto Money Farm!", 
     Duration = 5 
 })
 
-print("✅ Casaa Hub Final Loaded! + Mobile Bulet")
-print("📌 Keybind: RightBracket (UI), R (Trimp Old), F (Carry)")
-print("📌 Trimp New & Bhop: keybind kosong (isi sendiri di tab Keybind)")
+print("✅ Casaa Hub Final Loaded! + All features from this-for-u")
+print("📌 Fitur baru: Infinite Slide, Speed/Jump/Strafe Editor, Auto Money Farm, Anti AFK VirtualUser")
+print("📌 Keybind: R (Trimp), F (Carry), RightBracket (UI)")
 print("📱 Mobile: 2 tombol bulet TRIMP & CARRY (tab Mobile)")
