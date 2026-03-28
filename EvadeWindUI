@@ -1,10 +1,10 @@
 --[[ 
-    CASAA HUB - EVADE (FULL + AUTO TRIMP RESPAWN FIX)
+    CASAA HUB - EVADE (FULL + AUTO FARM 100% TEST-FOR-U)
     discord.gg/6UaRDjBY42
     Loader: WindUI (RAW VERSION)
     
     📌 FITUR LENGKAP:
-    [Auto] AutoTrimp Advanced, Auto Carry, Auto Money Farm, Auto Ticket Farm, Anti AFK
+    [Auto] AutoTrimp Advanced (mati otomatis pas respawn), Auto Carry, Auto Ticket Farm (100% Test-for-u), Auto Money Farm (100% Test-for-u), Anti AFK
     [Player] Infinite Slide, Speed/Jump/Strafe Editor, Bhop Advanced
     [Esp] Nextbot ESP, Downed ESP, ESP Ticket
     [Misc] No Clip, Revive System (Manual/Auto/Self)
@@ -14,7 +14,7 @@
     [Config] Save/Load Settings
     [Mobile] 2 Tombol BULET (TRIMP & CARRY)
     
-    🔄 AutoTrimp akan mati otomatis saat respawn/next round!
+    🔄 AutoTrimp mati otomatis saat respawn/next round!
 --]]
 
 -- ==============================================
@@ -484,7 +484,6 @@ local function resetAirAccumulator()
     getgenv().currentSpeed = getgenv().AutoTrimpSpeed
 end
 
--- EVENT: Pas respawn, matiin AutoTrimp
 player.CharacterAdded:Connect(function(newChar)
     task.wait(0.5)
     forceDisableAutoTrimp()
@@ -684,118 +683,212 @@ local AutoCarryToggle = AutoTab:Toggle({
 })
 
 -- ==============================================
--- 11. AUTO MONEY FARM (DARI THIS-FOR-U)
+-- 11. AUTO MONEY FARM (100% DARI TEST-FOR-U)
 -- ==============================================
-getgenv().autoMoneyFarmEnabled = false
-getgenv().autoMoneyFarmConnection = nil
+-- Referensi: https://raw.githubusercontent.com/syfta8/evade/refs/heads/main/Test-for-u
+-- Logic Auto Money Farm asli dari Test-for-u
+getgenv().FeatureStates = getgenv().FeatureStates or {}
+getgenv().FeatureStates.AutoMoneyFarm = false
+getgenv().AutoMoneyFarmConnection = nil
 
 local function startAutoMoneyFarm()
-    if getgenv().autoMoneyFarmConnection then return end
-    getgenv().autoMoneyFarmConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().autoMoneyFarmEnabled then return end
-        local char, root = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        
-        if char:GetAttribute("Downed") then
-            pcall(function() ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true) end)
+    local securityPart = workspace:FindFirstChild("SecurityPart")
+    if not securityPart then
+        getgenv().WindUI:Notify({
+            Title = "Auto Money Farm",
+            Content = "SecurityPart not found!",
+            Duration = 3
+        })
+        return
+    end
+
+    if getgenv().AutoMoneyFarmConnection then
+        getgenv().AutoMoneyFarmConnection:Disconnect()
+        getgenv().AutoMoneyFarmConnection = nil
+    end
+
+    getgenv().AutoMoneyFarmConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().FeatureStates.AutoMoneyFarm then return end
+
+        local character = player.Character
+        if not character then return end
+
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+
+        if character:GetAttribute("Downed") then
+            ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+            task.wait(2)
             return
         end
-        
+
+        local downedPlayerFound = false
         local playersInGame = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Players")
+
         if playersInGame then
             for _, playerModel in ipairs(playersInGame:GetChildren()) do
-                if playerModel:IsA("Model") and playerModel.Name ~= player.Name then
-                    if playerModel:GetAttribute("Downed") == true then
-                        local targetHRP = playerModel:FindFirstChild("HumanoidRootPart")
-                        if targetHRP then
-                            root.CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)
-                            pcall(function()
-                                ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, playerModel.Name)
-                            end)
-                            task.wait(0.5)
-                            break
-                        end
+                if not playerModel:IsA("Model") then continue end
+                if playerModel.Name == player.Name then continue end
+
+                local isDowned = playerModel:GetAttribute("Downed")
+                if isDowned == true then
+                    local targetHRP = playerModel:FindFirstChild("HumanoidRootPart")
+                    if not targetHRP then continue end
+
+                    local distance = (rootPart.Position - targetHRP.Position).Magnitude
+                    if distance > 50 then
+                        rootPart.CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.5)
                     end
+
+                    pcall(function()
+                        ReplicatedStorage.Events.Character.Interact:FireServer("Revive", true, playerModel.Name)
+                    end)
+
+                    downedPlayerFound = true
+                    break
                 end
+            end
+        end
+
+        if not downedPlayerFound then
+            local currentPos = rootPart.Position
+            local securityPos = securityPart.Position
+            local distanceToSecurity = (currentPos - securityPos).Magnitude
+
+            if distanceToSecurity > 10 then
+                rootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
             end
         end
     end)
 end
 
 local function stopAutoMoneyFarm()
-    if getgenv().autoMoneyFarmConnection then
-        getgenv().autoMoneyFarmConnection:Disconnect()
-        getgenv().autoMoneyFarmConnection = nil
+    if getgenv().AutoMoneyFarmConnection then
+        getgenv().AutoMoneyFarmConnection:Disconnect()
+        getgenv().AutoMoneyFarmConnection = nil
+    end
+
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local securityPart = workspace:FindFirstChild("SecurityPart")
+
+    if rootPart and securityPart then
+        rootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
     end
 end
 
 local AutoMoneyFarmToggle = AutoTab:Toggle({
-    Title = "Auto Money Farm",
-    Desc = "Revive player downed untuk uang",
+    Title = "Auto Money Farm (Test-for-u)",
+    Desc = "Auto revive players for money - 100% Test-for-u logic",
     Value = false,
     Callback = function(state)
-        getgenv().autoMoneyFarmEnabled = state
-        if state then startAutoMoneyFarm() else stopAutoMoneyFarm() end
-        WindUI:Notify({ Title = "Auto Money Farm", Content = state and "ON" or "OFF", Duration = 2 })
+        getgenv().FeatureStates.AutoMoneyFarm = state
+        if state then
+            startAutoMoneyFarm()
+            WindUI:Notify({ Title = "Auto Money Farm", Content = "ON", Duration = 2 })
+        else
+            stopAutoMoneyFarm()
+            WindUI:Notify({ Title = "Auto Money Farm", Content = "OFF", Duration = 2 })
+        end
     end
 })
 
 -- ==============================================
--- 12. AUTO TICKET FARM (DARI THIS-FOR-U)
+-- 12. AUTO TICKET FARM (100% DARI TEST-FOR-U)
 -- ==============================================
-getgenv().autoTicketFarmEnabled = false
-getgenv().autoTicketFarmConnection = nil
-local securityPart = workspace:FindFirstChild("SecurityPart")
+-- Referensi: https://raw.githubusercontent.com/syfta8/evade/refs/heads/main/Test-for-u
+-- Logic Auto Ticket Farm asli dari Test-for-u
+getgenv().FeatureStates.AutoTicketFarm = false
+getgenv().AutoTicketFarmConnection = nil
 
 local function startAutoTicketFarm()
-    if getgenv().autoTicketFarmConnection then return end
-    if not securityPart then return end
-    
-    getgenv().autoTicketFarmConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().autoTicketFarmEnabled then return end
-        local char, root = player.Character, player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        
-        if char:GetAttribute("Downed") then
-            pcall(function() ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true) end)
-            root.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
+    local securityPart = workspace:FindFirstChild("SecurityPart")
+    if not securityPart then
+        getgenv().WindUI:Notify({
+            Title = "Auto Ticket Farm",
+            Content = "SecurityPart not found!",
+            Duration = 3
+        })
+        return
+    end
+
+    if getgenv().AutoTicketFarmConnection then
+        getgenv().AutoTicketFarmConnection:Disconnect()
+        getgenv().AutoTicketFarmConnection = nil
+    end
+
+    getgenv().AutoTicketFarmConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().FeatureStates.AutoTicketFarm then
+            if getgenv().AutoTicketFarmConnection then
+                getgenv().AutoTicketFarmConnection:Disconnect()
+                getgenv().AutoTicketFarmConnection = nil
+            end
             return
         end
-        
-        local tickets = workspace:FindFirstChild("Game") and workspace.Game:FindFirstChild("Effects") and workspace.Game.Effects:FindFirstChild("Tickets")
-        if tickets then
-            local activeTickets = tickets:GetChildren()
-            if #activeTickets > 0 then
-                local ticketPart = activeTickets[1]:FindFirstChild("HumanoidRootPart")
-                if ticketPart then
-                    root.CFrame = ticketPart.CFrame
+
+        local character = player.Character
+        local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local tickets = workspace:FindFirstChild("Game") and 
+                       workspace.Game:FindFirstChild("Effects") and 
+                       workspace.Game.Effects:FindFirstChild("Tickets")
+
+        if character and humanoidRootPart then
+            if character:GetAttribute("Downed") then
+                ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+                humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 0, 0)
+                return
+            end
+
+            if tickets then
+                local activeTickets = tickets:GetChildren()
+                if #activeTickets > 0 then
+                    local ticketPart = activeTickets[1]:FindFirstChild("HumanoidRootPart")
+                    if ticketPart then
+                        local targetPosition = ticketPart.Position + Vector3.new(0, 0, 0)
+                        humanoidRootPart.CFrame = CFrame.new(targetPosition)
+                    end
+                else
+                    humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
                 end
             else
-                root.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
+                humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
             end
-        else
-            root.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
         end
     end)
 end
 
 local function stopAutoTicketFarm()
-    if getgenv().autoTicketFarmConnection then
-        getgenv().autoTicketFarmConnection:Disconnect()
-        getgenv().autoTicketFarmConnection = nil
+    if getgenv().AutoTicketFarmConnection then
+        getgenv().AutoTicketFarmConnection:Disconnect()
+        getgenv().AutoTicketFarmConnection = nil
+    end
+
+    local character = player.Character
+    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local securityPart = workspace:FindFirstChild("SecurityPart")
+    if humanoidRootPart and securityPart then
+        humanoidRootPart.CFrame = securityPart.CFrame + Vector3.new(0, 3, 0)
     end
 end
 
 local AutoTicketFarmToggle = AutoTab:Toggle({
-    Title = "Auto Ticket Farm",
-    Desc = "Farm tiket otomatis",
+    Title = "Auto Ticket Farm (Test-for-u)",
+    Desc = "Auto farm tickets - 100% Test-for-u logic",
     Value = false,
     Callback = function(state)
-        getgenv().autoTicketFarmEnabled = state
-        if state then startAutoTicketFarm() else stopAutoTicketFarm() end
-        WindUI:Notify({ Title = "Auto Ticket Farm", Content = state and "ON" or "OFF", Duration = 2 })
+        getgenv().FeatureStates.AutoTicketFarm = state
+        if state then
+            startAutoTicketFarm()
+            WindUI:Notify({ Title = "Auto Ticket Farm", Content = "ON", Duration = 2 })
+        else
+            stopAutoTicketFarm()
+            WindUI:Notify({ Title = "Auto Ticket Farm", Content = "OFF", Duration = 2 })
+        end
     end
 })
+
+AutoTab:Divider()
 
 -- ==============================================
 -- 13. ANTI AFK (VIRTUALUSER)
@@ -1514,12 +1607,12 @@ end })
 -- ==============================================
 WindUI:Notify({ 
     Title = "Casaa Hub", 
-    Content = "Loaded! AutoTrimp mati otomatis pas respawn!", 
+    Content = "Loaded! Auto Farm 100% Test-for-u logic!", 
     Duration = 5 
 })
 
-print("✅ Casaa Hub Final Loaded! AutoTrimp mati otomatis saat respawn")
-print("📌 Fitur baru: Infinite Slide, Speed/Jump/Strafe Editor, Auto Money Farm, Anti AFK VirtualUser")
-print("📌 AutoTrimp akan mati otomatis setiap next round - harus toggle ulang!")
+print("✅ Casaa Hub Final Loaded! Auto Farm 100% dari Test-for-u")
+print("📌 Fitur: AutoTrimp, Auto Money Farm, Auto Ticket Farm (100% Test-for-u)")
+print("📌 AutoTrimp mati otomatis saat respawn - harus toggle ulang!")
 print("📌 Keybind: R (Trimp), F (Carry), RightBracket (UI)")
 print("📱 Mobile: 2 tombol bulet TRIMP & CARRY (tab Mobile)")
